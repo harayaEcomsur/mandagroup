@@ -27,7 +27,12 @@ import { getHistory, appendHistory } from "@/lib/ig-history";
 // nombre de SU env var de token — ver resolveInstagramToken más abajo.
 export const runtime = "nodejs";
 
-const GRAPH_URL = "https://graph.facebook.com/v21.0";
+// Los tokens "IGAA..." (Instagram API with Instagram Login, la API actual)
+// solo funcionan contra graph.instagram.com — graph.facebook.com es el host
+// de la Messenger Platform clásica y los rechaza con "Cannot parse access
+// token" aunque el token sea válido. lib/instagram.ts (el feed) ya usaba el
+// host correcto; este webhook se había quedado con el antiguo.
+const GRAPH_URL = "https://graph.instagram.com/v25.0";
 
 // Verificación del webhook (Meta hace un GET al registrar la URL).
 export async function GET(req: Request) {
