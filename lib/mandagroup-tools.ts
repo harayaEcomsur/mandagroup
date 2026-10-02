@@ -59,6 +59,26 @@ export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?:
       },
     }),
 
+    ...(canal === "instagram"
+      ? {
+          // Solo Instagram sabe mandar un adjunto de imagen aparte (ver
+          // app/api/instagram/route.ts) — en web/WhatsApp esta tool no se
+          // ofrece para que el modelo no "ofrezca" una imagen que no se envía.
+          enviar_dresscode: tool({
+            description:
+              "Envía la imagen REAL con las reglas de dress code/vestimenta de la fiesta. Úsala cuando pregunten qué se puede o no usar para entrar, o por el dress code en general — además de la imagen, resume brevemente las reglas en tu respuesta de texto.",
+            inputSchema: z.object({}),
+            execute: async () => {
+              // Meta tiene que poder bajar esta imagen desde su servidor, así
+              // que va fija al dominio *.vercel.app (siempre apunta al deploy
+              // vigente) y no a NEXT_PUBLIC_SITE_URL — mandagroup.cl todavía
+              // apunta al hosting viejo (cPanel/WP), no a este proyecto.
+              return { image_url: "https://mandagroup.vercel.app/clients/mandagroup/dresscode.jpg" };
+            },
+          }),
+        }
+      : {}),
+
     derivar_invitacion: tool({
       description:
         "Confirma un evento (de los que devolvió listar_eventos_activos) y entrega el link real de compra de entradas. Solo llamar con un event_id que la tool anterior haya devuelto — nunca inventes un id.",

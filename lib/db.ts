@@ -157,9 +157,17 @@ export function ensureSchema(): Promise<void> {
         CREATE TABLE IF NOT EXISTS ig_threads (
           sender_id TEXT PRIMARY KEY,
           turns JSONB NOT NULL,
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          human_paused_until TIMESTAMPTZ,
+          bot_sent_mids JSONB
         )
       `;
+      // Si alguien del equipo responde a mano desde la app de Instagram (no el
+      // bot), el webhook detecta ese echo "ajeno" (su mid no está en
+      // bot_sent_mids) y pausa el hilo hasta human_paused_until — así el
+      // asistente no se pisa con una persona real ya atendiendo.
+      await sql`ALTER TABLE ig_threads ADD COLUMN IF NOT EXISTS human_paused_until TIMESTAMPTZ`;
+      await sql`ALTER TABLE ig_threads ADD COLUMN IF NOT EXISTS bot_sent_mids JSONB`;
 
       // Ficha de cliente de la Agenda: transversal a cualquier rubro que la use
       // (peluquería, barbería, dentista, abogado) — mismo patrón que re_clients

@@ -9,7 +9,14 @@ import { buildStoreTools } from "@/lib/store-tools";
 import { buildMandagroupTools } from "@/lib/mandagroup-tools";
 import { getInstagramScope, type InstagramScope } from "@/lib/mandagroup-store";
 import { logChat } from "@/lib/chat-log";
-import { getHistory, appendHistory } from "@/lib/ig-history";
+import {
+  getHistory,
+  appendHistory,
+  recordBotMessageId,
+  wasSentByBot,
+  pauseForHuman,
+  isHumanPaused,
+} from "@/lib/ig-history";
 
 // Webhook de Instagram Direct (Messenger Platform / Instagram Messaging API de
 // Meta): el mismo asistente del sitio respondiendo los DM de Instagram del
@@ -108,7 +115,11 @@ async function resolveInstagramSenderName(senderId: string, token: string | unde
   }
 }
 
-async function sendInstagramText(recipientId: string, body: string, token: string | undefined): Promise<boolean> {
+// Las 3 funciones de envío devuelven el `message_id` que Meta asigna (o
+// `undefined` si falló) — se usa para que recordBotMessageId() lo marque como
+// "nuestro" y así un eco de ESTE mensaje no se confunda con una persona real
+// respondiendo a mano (ver detección de toma de control humano más abajo).
+async function sendInstagramText(recipientId: string, body: string, token: string | undefined): Promise<string | undefined> {
   const res = await fetch(`${GRAPH_URL}/me/messages?access_token=${token}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -127,8 +138,10 @@ async function sendInstagramText(recipientId: string, body: string, token: strin
       status: res.status,
       body: await res.text().catch(() => "(no se pudo leer)"),
     });
+    return undefined;
   }
-  return res.ok;
+  const data = (await res.json().catch(() => null)) as { message_id?: string } | null;
+  return data?.message_id;
 }
 
 // Button template de Meta (hasta 3 botones "web_url"): se manda como mensaje
@@ -138,7 +151,7 @@ async function sendInstagramButtons(
   recipientId: string,
   buttons: { title: string; url: string }[],
   token: string | undefined,
-): Promise<boolean> {
+): Promise<string | undefined> {
   const res = await fetch(`${GRAPH_URL}/me/messages?access_token=${token}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -162,8 +175,33 @@ async function sendInstagramButtons(
       status: res.status,
       body: await res.text().catch(() => "(no se pudo leer)"),
     });
+    return undefined;
   }
-  return res.ok;
+  const data = (await res.json().catch(() => null)) as { message_id?: string } | null;
+  return data?.message_id;
+}
+
+// Imagen por URL pública (ej. la foto real del dress code) — dispara cuando el
+// modelo usa la tool enviar_dresscode (ver lib/mandagroup-tools.ts).
+async function sendInstagramImage(recipientId: string, imageUrl: string, token: string | undefined): Promise<string | undefined> {
+  const res = await fetch(`${GRAPH_URL}/me/messages?access_token=${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: recipientId },
+      message: { attachment: { type: "image", payload: { url: imageUrl, is_reusable: true } } },
+      messaging_type: "RESPONSE",
+    }),
+  });
+  if (!res.ok) {
+    console.warn("[instagram webhook] sendInstagramImage falló", {
+      status: res.status,
+      body: await res.text().catch(() => "(no se pudo leer)"),
+    });
+    return undefined;
+  }
+  const data = (await res.json().catch(() => null)) as { message_id?: string } | null;
+  return data?.message_id;
 }
 
 const VENUE_LABEL = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" } as const;
@@ -221,20 +259,50 @@ export async function POST(req: Request) {
     // punto se corta si no hay respuesta (payload inesperado, echo, etc.).
     console.log("[instagram webhook] payload recibido", JSON.stringify(payload).slice(0, 2000));
 
-    // Ignorar eco de nuestros propios mensajes, reacciones, "seen" y tipos no
-    // soportados en v1 (solo texto).
-    if (!messaging || messaging.message?.is_echo || !messaging.message?.text) {
-      console.log("[instagram webhook] descartado: sin messaging/es echo/sin texto", {
-        hasMessaging: !!messaging,
-        isEcho: messaging?.message?.is_echo,
-        hasText: !!messaging?.message?.text,
-      });
+    if (!messaging) return Response.json({ ok: true });
+
+    // Eco de un mensaje SALIENTE de la cuenta (nuestro bot o una persona del
+    // equipo escribiendo a mano desde la app de Instagram — Meta manda este
+    // mismo evento para ambos casos, sin distinguir el origen). En un eco,
+    // sender/recipient vienen invertidos: sender es la cuenta del negocio,
+    // recipient es la persona real. Si el mid no es de los que registramos al
+    // enviar, es una persona real ya respondiendo: pausamos el bot para ese
+    // hilo, para no pisarle la respuesta.
+    if (messaging.message?.is_echo) {
+      const customerId: string | undefined = messaging.recipient?.id;
+      const mid: string | undefined = messaging.message?.mid;
+      if (customerId && !(await wasSentByBot(customerId, mid))) {
+        console.log("[instagram webhook] eco ajeno — una persona ya está respondiendo, se pausa el bot", { customerId });
+        await pauseForHuman(customerId);
+      }
+      return Response.json({ ok: true });
+    }
+
+    // Mención o respuesta a una historia: no es una pregunta real, y
+    // responder con el flujo normal del asistente queda fuera de contexto.
+    const isStoryMention = Array.isArray(messaging.message?.attachments)
+      ? messaging.message.attachments.some((a: { type?: string }) => a?.type === "story_mention")
+      : false;
+    const isStoryReply = Boolean(messaging.message?.reply_to?.story);
+    if (isStoryMention || isStoryReply) {
+      console.log("[instagram webhook] descartado: mención/respuesta a historia", { isStoryMention, isStoryReply });
+      return Response.json({ ok: true });
+    }
+
+    // Reacciones, "seen" y tipos no soportados en v1 (solo texto).
+    if (!messaging.message?.text) {
+      console.log("[instagram webhook] descartado: sin texto", { hasMessaging: !!messaging });
       return Response.json({ ok: true });
     }
 
     const from: string = messaging.sender?.id;
     const userText: string = messaging.message.text;
     if (!from) return Response.json({ ok: true });
+
+    if (await isHumanPaused(from)) {
+      console.log("[instagram webhook] hilo pausado por toma de control humano, no se responde", { from });
+      return Response.json({ ok: true, note: "pausado por humano" });
+    }
 
     // `recipient.id` es la cuenta de Instagram que recibió el mensaje — con
     // varias cuentas conectadas a la misma app, decide con cuál responder.
@@ -256,10 +324,12 @@ export async function POST(req: Request) {
     // varios mensajes (servicio → hora → nombre) como en el chat del sitio.
     const history: ModelMessage[] = (await getHistory(from)).map((t) => ({ role: t.role, content: t.content }));
 
-    const { text } = await generateTextWithFallback(clientConfig.chat.model, {
+    const { text, toolResults } = await generateTextWithFallback(clientConfig.chat.model, {
       system:
         buildSystemPrompt() +
-        "\n\nEstás respondiendo por Instagram Direct: sé especialmente breve (2-4 frases), sin markdown ni asteriscos. Si el cliente necesita atención humana, dile que alguien del equipo le responderá por este mismo chat." +
+        "\n\nEstás respondiendo por Instagram Direct: sé especialmente breve (2-4 frases), sin markdown ni asteriscos." +
+        " Si el mensaje del cliente es ambiguo o te falta un dato para ayudarlo, pide que te lo aclare en vez de adivinar." +
+        " Si de verdad no sabes algo (está fuera de lo que puedes resolver: reservas, entradas, dress code, ubicación, horarios), dilo con naturalidad y dile que alguien del equipo le responderá por este mismo chat — nunca inventes ni adivines una respuesta." +
         (senderName
           ? `\n\nEl nombre de quien te escribe es "${senderName}" — salúdalo(a) por su nombre en vez de usar un mote genérico, y úsalo también más adelante en la conversación si se da natural (sin forzarlo en cada frase).`
           : "") +
@@ -282,10 +352,24 @@ export async function POST(req: Request) {
     });
 
     if (text?.trim()) {
-      await sendInstagramText(from, text.trim(), token);
+      const textMid = await sendInstagramText(from, text.trim(), token);
+      await recordBotMessageId(from, textMid);
+
+      // enviar_dresscode (ver lib/mandagroup-tools.ts) devuelve la URL de la
+      // imagen real — si el modelo la usó en este turno, se manda aparte.
+      const dresscodeResult = toolResults?.find((r) => r.toolName === "enviar_dresscode")?.output as
+        | { image_url?: string }
+        | undefined;
+      const dresscodeImageUrl = dresscodeResult?.image_url;
+      if (dresscodeImageUrl) {
+        const imageMid = await sendInstagramImage(from, dresscodeImageUrl, token);
+        await recordBotMessageId(from, imageMid);
+      }
+
       const buttons = filterButtonsByScope(clientConfig.instagramActionButtons, scope);
       if (buttons.length) {
-        await sendInstagramButtons(from, buttons, token);
+        const buttonsMid = await sendInstagramButtons(from, buttons, token);
+        await recordBotMessageId(from, buttonsMid);
       }
       await appendHistory(from, { role: "user", content: userText }, { role: "assistant", content: text.trim() });
       logChat({ canal: "instagram", userText, assistantText: text.trim() });

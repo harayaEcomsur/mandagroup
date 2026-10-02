@@ -15,6 +15,8 @@ export interface IgTurn {
 interface IgThread {
   turns: IgTurn[];
   updatedAt: number;
+  botMids?: string[];
+  humanPausedUntil?: number;
 }
 
 const MAX_TURNS = 12; // ~6 idas y vueltas
@@ -77,4 +79,78 @@ function appendInMemory(senderId: string, ...turns: IgTurn[]): void {
     const oldest = [...map.entries()].sort((a, b) => a[1].updatedAt - b[1].updatedAt)[0];
     if (oldest) map.delete(oldest[0]);
   }
+}
+
+// --- Toma de control humano ---
+// Instagram manda un webhook "echo" por CADA mensaje saliente de la cuenta,
+// lo haya mandado nuestra API o una persona del equipo escribiendo a mano
+// desde la app — Meta no distingue el origen en el payload. Por eso el bot
+// guarda el id de sus propios mensajes al enviarlos; si llega un echo con un
+// id que no es nuestro, es una persona real ya atendiendo esa conversación,
+// y el bot se pausa ahí para no pisarle la respuesta.
+
+export async function recordBotMessageId(senderId: string, mid: string | undefined): Promise<void> {
+  if (!mid) return;
+  await withDb(
+    async () => {
+      const sql = db();
+      await sql`
+        INSERT INTO ig_threads (sender_id, turns, bot_sent_mids)
+        VALUES (${senderId}, '[]'::jsonb, ${jsonb([mid])})
+        ON CONFLICT (sender_id) DO UPDATE
+        SET bot_sent_mids = COALESCE(ig_threads.bot_sent_mids, '[]'::jsonb) || EXCLUDED.bot_sent_mids
+      `;
+    },
+    () => {
+      const t = threads().get(senderId) ?? { turns: [], updatedAt: Date.now() };
+      t.botMids = [...(t.botMids ?? []), mid];
+      threads().set(senderId, t);
+    }
+  );
+}
+
+export async function wasSentByBot(senderId: string, mid: string | undefined): Promise<boolean> {
+  if (!mid) return false;
+  return withDb(
+    async () => {
+      const sql = db();
+      const rows = await sql`SELECT bot_sent_mids ? ${mid} AS matched FROM ig_threads WHERE sender_id = ${senderId} LIMIT 1`;
+      return Boolean(rows[0]?.matched);
+    },
+    () => Boolean(threads().get(senderId)?.botMids?.includes(mid))
+  );
+}
+
+export async function pauseForHuman(senderId: string, hours = 6): Promise<void> {
+  const untilMs = Date.now() + hours * 60 * 60 * 1000;
+  await withDb(
+    async () => {
+      const sql = db();
+      await sql`
+        INSERT INTO ig_threads (sender_id, turns, human_paused_until)
+        VALUES (${senderId}, '[]'::jsonb, ${new Date(untilMs).toISOString()})
+        ON CONFLICT (sender_id) DO UPDATE SET human_paused_until = EXCLUDED.human_paused_until
+      `;
+    },
+    () => {
+      const t = threads().get(senderId) ?? { turns: [], updatedAt: Date.now() };
+      t.humanPausedUntil = untilMs;
+      threads().set(senderId, t);
+    }
+  );
+}
+
+export async function isHumanPaused(senderId: string): Promise<boolean> {
+  return withDb(
+    async () => {
+      const sql = db();
+      const rows = await sql`SELECT human_paused_until FROM ig_threads WHERE sender_id = ${senderId} LIMIT 1`;
+      const until = rows[0]?.human_paused_until as string | null | undefined;
+      return Boolean(until && new Date(until).getTime() > Date.now());
+    },
+    () => {
+      const until = threads().get(senderId)?.humanPausedUntil;
+      return Boolean(until && until > Date.now());
+    }
+  );
 }
