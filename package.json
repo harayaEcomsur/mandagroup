@@ -22,6 +22,7 @@
     "@ai-sdk/react": "^4.0.88",
     "@vercel/blob": "^2.8.0",
     "ai": "^7.0.85",
+    "bcryptjs": "^3.0.3",
     "google-auth-library": "^10.9.1",
     "jose": "^6.2.10",
     "lucide-react": "^0.427.0",

@@ -2,21 +2,27 @@ import { cookies } from "next/headers";
 import { OAuth2Client } from "google-auth-library";
 import { SignJWT, jwtVerify } from "jose";
 import { clientConfig } from "@/config/client.config";
+import { findAdminCredentialByEmail, hasAnyAdminCredential } from "@/lib/admin-users-store";
 
-// Acceso a los paneles de admin (/agenda/admin, /tienda/admin). Dos métodos,
-// ambos opcionales y compatibles entre sí durante la transición:
+// Acceso a los paneles de admin (/agenda/admin, /tienda/admin, /eventos/admin).
+// Tres métodos, todos opcionales y compatibles entre sí:
 //
 //  1. Google (recomendado): cada persona entra con su cuenta de Google, y se
 //     autoriza contra `clientConfig.admin.users` — sin clave que compartir por
 //     URL. Requiere NEXT_PUBLIC_GOOGLE_CLIENT_ID + SESSION_SECRET.
-//  2. Clave compartida (heredado): ?clave=... contra AGENDA_ADMIN_KEY. Sigue
+//  2. Usuario/contraseña (lib/admin-users-store.ts): credenciales propias con
+//     hash bcrypt en la base — para cuando no hay (o no se quiere depender
+//     solo de) una cuenta de Google. Login por username O email indistinto.
+//  3. Clave compartida (heredado): ?clave=... contra AGENDA_ADMIN_KEY. Sigue
 //     funcionando mientras esa env var exista, para no romper clientes que
 //     todavía no migraron. Siempre actúa como "admin" — la clave es del dueño,
 //     no identifica a una persona.
 //
-// La sesión de Google es un JWT propio (no el id_token de Google, que vive
-// fuera de nuestro control) en una cookie httpOnly — funciona igual con o sin
-// Postgres, porque no depende de estado compartido entre invocaciones.
+// La sesión (Google o usuario/contraseña) es un JWT propio en una cookie
+// httpOnly — funciona igual con o sin Postgres, porque no depende de estado
+// compartido entre invocaciones. El JWT solo guarda el email; el rol se
+// re-resuelve en cada request contra config/DB, así que cambiarlo aplica de
+// inmediato sin que la persona tenga que volver a iniciar sesión.
 //
 // Roles: "admin" ve y edita todo (reservas + configuración del negocio).
 // "staff" (ej. cada barbero/peluquera) solo confirma/cancela reservas y
@@ -40,10 +46,16 @@ function sessionSecret(): Uint8Array | null {
   return new TextEncoder().encode(secret);
 }
 
-function findUser(email: string): SessionUser | null {
+// Primero config (Google allowlist, fijo por cliente), después las
+// credenciales propias en la base (lib/admin-users-store.ts) — cualquiera de
+// las dos fuentes autoriza, y el rol siempre se re-resuelve en vivo.
+async function findUser(email: string): Promise<SessionUser | null> {
   const users = clientConfig.admin?.users ?? [];
-  const match = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  return match ? { email: match.email, role: match.role } : null;
+  const configMatch = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (configMatch) return { email: configMatch.email, role: configMatch.role };
+
+  const dbMatch = await findAdminCredentialByEmail(email);
+  return dbMatch ? { email: dbMatch.email, role: dbMatch.role } : null;
 }
 
 // Verifica el id_token que entrega Google Identity Services en el navegador.
@@ -63,7 +75,7 @@ export async function verifyGoogleCredential(idToken: string): Promise<SessionUs
   }
   const email = payload?.email;
   if (!email || !payload?.email_verified) return { error: "No se pudo verificar el correo de Google." };
-  const user = findUser(email);
+  const user = await findUser(email);
   if (!user) return { error: `${email} no está autorizado para administrar este sitio.` };
   return user;
 }
@@ -105,7 +117,7 @@ async function sessionUserFromCookie(): Promise<SessionUser | null> {
     if (email === CLAVE_COMPARTIDA_EMAIL) {
       return process.env.AGENDA_ADMIN_KEY ? { email: CLAVE_COMPARTIDA_EMAIL, role: "admin" } : null;
     }
-    return findUser(email);
+    return await findUser(email);
   } catch {
     return null;
   }
@@ -144,4 +156,11 @@ export function googleLoginEnabled(): boolean {
 
 export function claveLoginEnabled(): boolean {
   return Boolean(process.env.AGENDA_ADMIN_KEY);
+}
+
+// Requiere SESSION_SECRET (para poder emitir la cookie) Y al menos una
+// credencial ya creada — sin eso, mostrar el formulario no serviría de nada.
+export async function passwordLoginEnabled(): Promise<boolean> {
+  if (!process.env.SESSION_SECRET) return false;
+  return hasAnyAdminCredential();
 }

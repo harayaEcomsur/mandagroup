@@ -1,4 +1,5 @@
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { PasswordLoginForm } from "@/components/auth/PasswordLoginForm";
 import { ClaveLoginForm } from "@/components/auth/ClaveLoginForm";
 
 // Pantalla de login del panel — reemplaza el viejo párrafo + <code>?clave=…</code>
@@ -12,6 +13,7 @@ export function AdminLoginCard({
   logoUrl,
   description,
   googleEnabled,
+  passwordEnabled,
   claveEnabled,
   claveEndpoint = "/api/auth/clave",
 }: {
@@ -19,9 +21,22 @@ export function AdminLoginCard({
   logoUrl: string;
   description?: string;
   googleEnabled: boolean;
+  passwordEnabled?: boolean;
   claveEnabled: boolean;
   claveEndpoint?: string;
 }) {
+  const methods = [googleEnabled, passwordEnabled, claveEnabled].filter(Boolean).length;
+  let shown = 0;
+
+  function divider() {
+    shown++;
+    return shown < methods ? (
+      <div className="flex w-full items-center gap-3 text-xs uppercase tracking-wider text-foreground/40">
+        <span className="h-px flex-1 bg-foreground/10" /> o <span className="h-px flex-1 bg-foreground/10" />
+      </div>
+    ) : null;
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6 rounded-2xl border border-foreground/10 bg-background px-6 py-10 text-center shadow-sm sm:px-10">
       {/* eslint-disable-next-line @next/next/no-img-element -- logoUrl varía en formato (svg/png) entre clientes, mismo patrón que Header.tsx */}
@@ -33,14 +48,20 @@ export function AdminLoginCard({
           {description ?? "Gestiona reservas, horarios y clientes desde un solo lugar."}
         </p>
       </div>
-      {googleEnabled && <GoogleLoginButton clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!} />}
-      {googleEnabled && claveEnabled && (
-        <div className="flex w-full items-center gap-3 text-xs uppercase tracking-wider text-foreground/40">
-          <span className="h-px flex-1 bg-foreground/10" /> o <span className="h-px flex-1 bg-foreground/10" />
-        </div>
+      {googleEnabled && (
+        <>
+          <GoogleLoginButton clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!} />
+          {divider()}
+        </>
+      )}
+      {passwordEnabled && (
+        <>
+          <PasswordLoginForm />
+          {divider()}
+        </>
       )}
       {claveEnabled && <ClaveLoginForm endpoint={claveEndpoint} />}
-      {!googleEnabled && !claveEnabled && (
+      {methods === 0 && (
         <p className="text-sm text-foreground/60">
           El acceso al panel no está configurado todavía — contacta a HarayaDev para activarlo.
         </p>

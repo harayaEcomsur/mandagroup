@@ -5,7 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AdminLoginCard } from "@/components/auth/AdminLoginCard";
 import { AdminEventos } from "@/components/eventos/AdminEventos";
-import { currentAdminUser, googleLoginEnabled, claveLoginEnabled, isClaveSession } from "@/lib/auth";
+import { currentAdminUser, googleLoginEnabled, passwordLoginEnabled, claveLoginEnabled, isClaveSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export default async function EventosAdminPage({ searchParams }: { searchParams:
 
   const user = await currentAdminUser(searchParams.clave ?? null);
   const googleEnabled = googleLoginEnabled();
+  const passwordEnabled = await passwordLoginEnabled();
   const claveEnabled = claveLoginEnabled();
 
   return (
@@ -37,6 +38,7 @@ export default async function EventosAdminPage({ searchParams }: { searchParams:
                 logoUrl={clientConfig.branding.logoUrl}
                 description="Este panel administra el número de reservas, los links de entradas por evento, y las estadísticas de WhatsApp/Instagram/web."
                 googleEnabled={googleEnabled}
+                passwordEnabled={passwordEnabled}
                 claveEnabled={claveEnabled}
               />
             </div>
