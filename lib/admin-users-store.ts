@@ -30,6 +30,18 @@ export interface AdminCredential {
 const KEY = "admin_credentials";
 const SETUP_TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 horas para crear la contraseña
 
+// Política mínima de contraseña — se valida ACÁ, no solo en el formulario,
+// para que quede forzada sin importar qué camino la llame (setup, rotación
+// futura, un script). "Generar contraseña segura" del formulario ya cumple
+// esto de sobra (20 caracteres con mayúsculas/minúsculas/números/símbolos).
+export function passwordPolicyError(password: string): string | null {
+  if (password.length < 12) return "La contraseña debe tener al menos 12 caracteres.";
+  if (!/[a-z]/.test(password)) return "Debe incluir al menos una letra minúscula.";
+  if (!/[A-Z]/.test(password)) return "Debe incluir al menos una letra mayúscula.";
+  if (!/[0-9]/.test(password)) return "Debe incluir al menos un número.";
+  return null;
+}
+
 const g = globalThis as unknown as { __adminCredentials?: AdminCredential[] };
 
 function memory(): AdminCredential[] {
@@ -90,18 +102,23 @@ export async function findBySetupToken(token: string): Promise<AdminCredential |
   return match;
 }
 
+type SetupResult = { ok: true; user: SessionUser } | { ok: false; error: string };
+
 // La persona invitada define su propia contraseña acá — primera vez que se
 // guarda un hash para esa cuenta. El token se consume (no sirve dos veces).
-export async function completeSetup(token: string, password: string): Promise<SessionUser | null> {
+export async function completeSetup(token: string, password: string): Promise<SetupResult> {
   const credential = await findBySetupToken(token);
-  if (!credential) return null;
+  if (!credential) return { ok: false, error: "El link de configuración no es válido o ya expiró." };
+  const policyError = passwordPolicyError(password);
+  if (policyError) return { ok: false, error: policyError };
+
   const passwordHash = await bcrypt.hash(password, 12);
   const list = await listCredentials();
   const next = list.map((c) =>
     c.username === credential.username ? { ...c, passwordHash, setupToken: null, setupTokenExpiresAt: null } : c
   );
   await saveCredentials(next);
-  return { email: credential.email, role: credential.role };
+  return { ok: true, user: { email: credential.email, role: credential.role } };
 }
 
 // Para que la propia persona pueda rotar su contraseña ya sabiendo la
@@ -111,12 +128,16 @@ export async function setAdminCredential(input: {
   email: string;
   password: string;
   role?: "admin" | "staff";
-}): Promise<void> {
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const policyError = passwordPolicyError(input.password);
+  if (policyError) return { ok: false, error: policyError };
+
   const passwordHash = await bcrypt.hash(input.password, 12);
   const list = await listCredentials();
   const next = list.filter((c) => c.username.toLowerCase() !== input.username.toLowerCase());
   next.push({ username: input.username, email: input.email, passwordHash, role: input.role ?? "admin", setupToken: null, setupTokenExpiresAt: null });
   await saveCredentials(next);
+  return { ok: true };
 }
 
 export async function removeAdminCredential(username: string): Promise<void> {
