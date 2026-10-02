@@ -90,6 +90,15 @@ async function sendInstagramText(recipientId: string, body: string, token: strin
       messaging_type: "RESPONSE",
     }),
   });
+  // Diagnóstico temporal: la llamada a la Graph API puede fallar en silencio
+  // (token vencido, permiso faltante, cuenta no autorizada) y antes no quedaba
+  // registro de eso en ningún lado.
+  if (!res.ok) {
+    console.warn("[instagram webhook] sendInstagramText falló", {
+      status: res.status,
+      body: await res.text().catch(() => "(no se pudo leer)"),
+    });
+  }
   return res.ok;
 }
 
@@ -119,6 +128,12 @@ async function sendInstagramButtons(
       messaging_type: "RESPONSE",
     }),
   });
+  if (!res.ok) {
+    console.warn("[instagram webhook] sendInstagramButtons falló", {
+      status: res.status,
+      body: await res.text().catch(() => "(no se pudo leer)"),
+    });
+  }
   return res.ok;
 }
 
@@ -155,9 +170,18 @@ export async function POST(req: Request) {
     // Estructura estándar del webhook: entry[].messaging[]
     const messaging = (payload as any)?.entry?.[0]?.messaging?.[0];
 
+    // Diagnóstico temporal: ver exactamente qué llega, para saber en qué
+    // punto se corta si no hay respuesta (payload inesperado, echo, etc.).
+    console.log("[instagram webhook] payload recibido", JSON.stringify(payload).slice(0, 2000));
+
     // Ignorar eco de nuestros propios mensajes, reacciones, "seen" y tipos no
     // soportados en v1 (solo texto).
     if (!messaging || messaging.message?.is_echo || !messaging.message?.text) {
+      console.log("[instagram webhook] descartado: sin messaging/es echo/sin texto", {
+        hasMessaging: !!messaging,
+        isEcho: messaging?.message?.is_echo,
+        hasText: !!messaging?.message?.text,
+      });
       return Response.json({ ok: true });
     }
 
@@ -169,6 +193,7 @@ export async function POST(req: Request) {
     // varias cuentas conectadas a la misma app, decide con cuál responder.
     const igAccountId: string | undefined = messaging.recipient?.id;
     const token = resolveInstagramToken(igAccountId);
+    console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, userText });
 
     // Historial corto por IGSID: permite completar el flujo de agendar en
     // varios mensajes (servicio → hora → nombre) como en el chat del sitio.
