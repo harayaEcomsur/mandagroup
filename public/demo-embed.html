@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Vista previa del asistente IA — HarayaDev</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f4f4f6;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #16181d;
+    padding: 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* Fondo alusivo al negocio: foto real de su sitio, difuminada, con un tinte
+     de su color de marca encima para que el texto siga siendo legible.
+     Sin ?bg= queda el fondo plano de siempre (compatible con links viejos). */
+  .hd-bgphoto {
+    position: fixed;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(22px) saturate(1.05);
+    transform: scale(1.1);
+    z-index: 0;
+  }
+  .hd-bgtint {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+  }
+  .card {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.18);
+    padding: 36px 32px;
+    text-align: center;
+  }
+  .hd-logo {
+    max-height: 52px;
+    max-width: 220px;
+    margin: 0 auto 14px;
+    display: none;
+    object-fit: contain;
+    padding: 10px 16px;
+    border-radius: 10px;
+  }
+  .tag {
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #ff3d3d;
+    font-weight: 700;
+  }
+  h1 { font-size: 22px; margin: 10px 0 6px; }
+  p { font-size: 15px; line-height: 1.55; color: #55585f; margin: 0 0 8px; }
+  .hint {
+    margin-top: 22px;
+    font-size: 13px;
+    color: #8a8d94;
+    border-top: 1px solid #eee;
+    padding-top: 16px;
+  }
+  #hd-error {
+    margin-top: 18px;
+    font-size: 13px;
+    color: #b3261e;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="hd-bgphoto" id="hd-bgphoto" style="display:none"></div>
+  <div class="hd-bgtint" id="hd-bgtint" style="display:none"></div>
+  <div class="card">
+    <img class="hd-logo" id="hd-logo" alt="" />
+    <div class="tag" id="hd-tag">Vista previa</div>
+    <h1 id="hd-title">Asistente IA</h1>
+    <p>Así conversaría este asistente en tu sitio — abajo a la derecha. Pruébalo con una pregunta real de tu negocio.</p>
+    <p class="hint">Esta página es solo una vista previa para revisar el asistente antes de instalarlo. La instalación real es una sola línea en tu sitio, sin tocar tu diseño ni tu hosting.</p>
+    <div id="hd-error">Falta el parámetro <code>?t=</code> con el identificador del negocio.</div>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var tenant = params.get("t");
+      var name = params.get("name") || "Asistente";
+      var color = params.get("color") || "#FF3D3D";
+      var bg = params.get("bg"); // foto real del negocio (URL absoluta a su propio sitio)
+      var logo = params.get("logo"); // logo real del negocio
+      var logobg = params.get("logobg"); // fondo detrás del logo, solo si el logo es tinta clara sobre transparente
+      document.getElementById("hd-title").textContent = name;
+      document.getElementById("hd-tag").textContent = "Vista previa — " + name;
+
+      if (bg) {
+        var bgEl = document.getElementById("hd-bgphoto");
+        bgEl.style.backgroundImage = "url('" + bg + "')";
+        bgEl.style.display = "block";
+        var tintEl = document.getElementById("hd-bgtint");
+        tintEl.style.background = "linear-gradient(180deg, " + color + "cc, " + color + "66 45%, #f4f4f6cc)";
+        tintEl.style.display = "block";
+      }
+      if (logo) {
+        var logoEl = document.getElementById("hd-logo");
+        logoEl.src = logo;
+        logoEl.alt = name;
+        logoEl.style.display = "block";
+        if (logobg) logoEl.style.background = logobg;
+      }
+
+      if (!tenant) {
+        document.getElementById("hd-error").style.display = "block";
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = "/widget.js";
+      s.setAttribute("data-tenant", tenant);
+      s.setAttribute("data-name", name);
+      s.setAttribute("data-color", color);
+      document.body.appendChild(s);
+    })();
+  </script>
+</body>
+</html>

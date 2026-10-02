@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="96" fill="#D9480F" stroke="#F2A65A" stroke-width="6"/>
+  <text x="100" y="122" text-anchor="middle" font-family="Nunito, Quicksand, system-ui, sans-serif" font-size="72" font-weight="700" fill="#FFFBF5">SB</text>
+</svg>

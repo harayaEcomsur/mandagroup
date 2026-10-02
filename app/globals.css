@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Canales R G B separados por espacio (no hex) a propósito: es el único
+     formato que le permite a Tailwind componer estos colores con las
+     utilidades de opacidad (text-foreground/70, bg-primary/10, etc.) — con un
+     string hex, Tailwind no genera ninguna regla para esas clases y quedan
+     como no-ops silenciosos. Ver tailwind.config.ts y lib/theme.ts. */
+  --color-primary: 37 99 235;
+  --color-accent: 245 158 11;
+  --color-background: 255 255 255;
+  --color-foreground: 17 17 17;
+  /* NO --font-heading/--font-body acá a propósito: `fontPairing` es
+     obligatorio en el schema (nunca falta), y layout.tsx siempre pone la
+     clase de next/font en <html> — pero esa clase y este :root tienen la
+     MISMA especificidad (0,1,0), así que si esta regla define un valor acá
+     también, gana por orden de cascada y la tipografía real del cliente
+     queda invisible (mismo bug de fondo que tuvieron los colores: un default
+     puesto "por si acaso" termina ganándole siempre al valor real). */
+}
+
+body {
+  background-color: rgb(var(--color-background));
+  color: rgb(var(--color-foreground));
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 2px;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}

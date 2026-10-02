@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/resumen",
+      "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/privacidad/purgar",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}
