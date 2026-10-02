@@ -46,14 +46,29 @@ export async function GET(req: Request) {
 // cuerpo CRUDO. Opt-in: solo se exige si INSTAGRAM_APP_SECRET está configurado.
 // Sin él, el webhook sigue funcionando pero queda abierto — conviene setearlo en
 // producción para que nadie inyecte mensajes falsos y gaste tokens/mensajes.
-function verifySignature(rawBody: string, signatureHeader: string | null): boolean {
+//
+// Importante: el HMAC se calcula sobre los BYTES crudos del body (Buffer), no
+// sobre un string ya decodificado — pasar por un string intermedio puede no
+// reconstruir exactamente los mismos bytes que Meta firmó.
+function verifySignature(rawBody: Buffer, signatureHeader: string | null): boolean {
   const secret = process.env.INSTAGRAM_APP_SECRET;
   if (!secret) return true; // sin secreto configurado: no se verifica
   if (!signatureHeader?.startsWith("sha256=")) return false;
   const expected = "sha256=" + createHmac("sha256", secret).update(rawBody).digest("hex");
   const a = Buffer.from(signatureHeader);
   const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
+  const matches = a.length === b.length && timingSafeEqual(a, b);
+  if (!matches) {
+    // Log temporal de diagnóstico — no expone el secreto, solo las firmas
+    // (ya públicas: la recibida viaja en un header que no es secreto) y el
+    // largo del body, para entender por qué no calzan.
+    console.warn("[instagram webhook] firma no coincide", {
+      recibida: signatureHeader,
+      esperada: expected,
+      bodyBytes: rawBody.length,
+    });
+  }
+  return matches;
 }
 
 // Para clientes con una sola cuenta de Instagram, `igAccountId` nunca matchea
@@ -113,22 +128,23 @@ export async function POST(req: Request) {
   const configured =
     process.env.GEMINI_API_KEY && (process.env.INSTAGRAM_TOKEN || clientConfig.instagramAccounts);
 
-  // Cuerpo crudo primero: se necesita tal cual para validar la firma de Meta.
-  let raw: string;
+  // Cuerpo crudo como bytes (no texto): el HMAC se valida sobre los bytes
+  // exactos que mandó Meta, antes de cualquier decodificación.
+  let rawBytes: Buffer;
   try {
-    raw = await req.text();
+    rawBytes = Buffer.from(await req.arrayBuffer());
   } catch {
     return Response.json({ ok: true });
   }
 
-  if (!verifySignature(raw, req.headers.get("x-hub-signature-256"))) {
+  if (!verifySignature(rawBytes, req.headers.get("x-hub-signature-256"))) {
     console.warn("[instagram webhook] firma inválida — payload descartado");
     return Response.json({ ok: true });
   }
 
   let payload: unknown;
   try {
-    payload = JSON.parse(raw);
+    payload = JSON.parse(rawBytes.toString("utf8"));
   } catch {
     return Response.json({ ok: true });
   }
