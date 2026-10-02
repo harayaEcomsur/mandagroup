@@ -369,6 +369,15 @@ export const clientConfigSchema = z.object({
     .max(3)
     .optional(),
 
+  // Botones de acción que el ChatWidget del sitio muestra junto a las
+  // respuestas del asistente (mismo concepto que instagramActionButtons, pero
+  // sin el límite de 20 caracteres del button template de Meta). Sin esto, el
+  // chat del sitio solo responde con texto/links markdown.
+  chatActionButtons: z
+    .array(z.object({ label: z.string(), url: z.string().url() }))
+    .max(4)
+    .optional(),
+
   // Variantes de paleta para mostrar al cliente en /variantes ("¿cuál te gusta
   // más: A, B o C?"). Opcional: si no se define, /variantes explica cómo usarlas.
   // `npm run palette -- logo.png` sugiere estas variantes automáticamente.

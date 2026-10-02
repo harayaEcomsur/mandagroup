@@ -98,6 +98,13 @@ export const clientConfig = defineClientConfig({
     { title: "Reservar mesa", url: "https://wa.me/56990721033" },
   ],
 
+  // Mismos 3 links, mostrados como botones en el chat del sitio (ver ChatWidget).
+  chatActionButtons: [
+    { label: "Entradas Manda Reñaca", url: "https://vesti.cl/company/manda-renaca" },
+    { label: "Entradas Manda Viña del Mar", url: "https://vesti.cl/company/manda-group-vina" },
+    { label: "Reservar mesa (WhatsApp)", url: "https://wa.me/56990721033" },
+  ],
+
   seo: {
     title: "Manda Group — Manda Reñaca & Manda Viña del Mar",
     description: "Reserva tu mesa o compra tu entrada a Costa Nights en Manda Reñaca y Manda Viña del Mar, directo por WhatsApp.",

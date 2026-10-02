@@ -22,7 +22,9 @@ export default function HomePage() {
       {hasWhatsapp && contact.whatsapp ? (
         <WhatsAppButton phone={contact.whatsapp} message={contact.whatsappPrefilledMessage} />
       ) : null}
-      {modules.chat ? <ChatWidget businessName={meta.businessName} stacked={hasWhatsapp} /> : null}
+      {modules.chat ? (
+        <ChatWidget businessName={meta.businessName} stacked={hasWhatsapp} actionButtons={clientConfig.chatActionButtons} />
+      ) : null}
     </>
   );
 }

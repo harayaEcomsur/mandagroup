@@ -13,7 +13,15 @@ function messageText(parts: { type: string; text?: string }[]): string {
     .join("");
 }
 
-export function ChatWidget({ businessName, stacked }: { businessName: string; stacked?: boolean }) {
+export function ChatWidget({
+  businessName,
+  stacked,
+  actionButtons,
+}: {
+  businessName: string;
+  stacked?: boolean;
+  actionButtons?: { label: string; url: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const { messages, sendMessage, status, error, regenerate } = useChat({
@@ -67,6 +75,24 @@ export function ChatWidget({ businessName, stacked }: { businessName: string; st
               </div>
             )}
           </div>
+          {/* Siempre visibles (no solo tras una respuesta): mismo criterio que
+              los botones del bot de Instagram — la persona nunca se queda sin
+              un siguiente paso concreto al que ir. */}
+          {actionButtons && actionButtons.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 border-t border-black/10 px-3 py-2">
+              {actionButtons.map((b) => (
+                <a
+                  key={b.url}
+                  href={b.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                >
+                  {b.label}
+                </a>
+              ))}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t border-black/10 p-2">
             <input
               value={input}
