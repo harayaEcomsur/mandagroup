@@ -84,6 +84,29 @@ function resolveInstagramToken(igAccountId: string | undefined): string | undefi
   return (envVarName && process.env[envVarName]) || process.env.INSTAGRAM_TOKEN;
 }
 
+// Nombre real de quien escribe (para saludar por su nombre en vez de un mote
+// genérico). Requiere que la persona ya le haya escrito al negocio (consentimiento
+// implícito) — si Meta no lo entrega (usuario sin nombre público, token sin
+// permiso, etc.) seguimos sin nombre, nunca bloqueamos la respuesta por esto.
+async function resolveInstagramSenderName(senderId: string, token: string | undefined): Promise<string | undefined> {
+  if (!token) return undefined;
+  try {
+    const res = await fetch(`${GRAPH_URL}/${senderId}?fields=name,username&access_token=${token}`);
+    if (!res.ok) {
+      console.warn("[instagram webhook] resolveInstagramSenderName falló", {
+        status: res.status,
+        body: await res.text().catch(() => "(no se pudo leer)"),
+      });
+      return undefined;
+    }
+    const data = (await res.json()) as { name?: string; username?: string };
+    return data.name || data.username || undefined;
+  } catch (error) {
+    console.warn("[instagram webhook] resolveInstagramSenderName error", error);
+    return undefined;
+  }
+}
+
 async function sendInstagramText(recipientId: string, body: string, token: string | undefined): Promise<boolean> {
   const res = await fetch(`${GRAPH_URL}/me/messages?access_token=${token}`, {
     method: "POST",
@@ -198,7 +221,8 @@ export async function POST(req: Request) {
     // varias cuentas conectadas a la misma app, decide con cuál responder.
     const igAccountId: string | undefined = messaging.recipient?.id;
     const token = resolveInstagramToken(igAccountId);
-    console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, userText });
+    const senderName = await resolveInstagramSenderName(from, token);
+    console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, senderName, userText });
 
     // Historial corto por IGSID: permite completar el flujo de agendar en
     // varios mensajes (servicio → hora → nombre) como en el chat del sitio.
@@ -207,7 +231,10 @@ export async function POST(req: Request) {
     const { text } = await generateTextWithFallback(clientConfig.chat.model, {
       system:
         buildSystemPrompt() +
-        "\n\nEstás respondiendo por Instagram Direct: sé especialmente breve (2-4 frases), sin markdown ni asteriscos. Si el cliente necesita atención humana, dile que alguien del equipo le responderá por este mismo chat.",
+        "\n\nEstás respondiendo por Instagram Direct: sé especialmente breve (2-4 frases), sin markdown ni asteriscos. Si el cliente necesita atención humana, dile que alguien del equipo le responderá por este mismo chat." +
+        (senderName
+          ? `\n\nEl nombre de quien te escribe es "${senderName}" — salúdalo(a) por su nombre en vez de usar un mote genérico, y úsalo también más adelante en la conversación si se da natural (sin forzarlo en cada frase).`
+          : ""),
       messages: [...history, { role: "user", content: userText }],
       maxOutputTokens: clientConfig.chat.maxTokensPerReply,
       tools: { ...buildAgendaTools(), ...buildLeadTools(), ...buildStoreTools(), ...buildMandagroupTools("instagram", userText) },
