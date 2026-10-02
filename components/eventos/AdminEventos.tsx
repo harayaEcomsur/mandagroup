@@ -43,6 +43,12 @@ interface InstagramScope {
   allowReservations: boolean;
 }
 
+interface PausedThread {
+  senderId: string;
+  pausedUntil: string;
+  lastUserMessage: string | null;
+}
+
 interface State {
   reservasWhatsapp: string | null;
   events: MandagroupEvent[];
@@ -50,6 +56,7 @@ interface State {
   chats: ChatEntry[];
   instagramScopes: Record<string, InstagramScope>;
   instagramAccounts: Record<string, string>;
+  pausedThreads: PausedThread[];
 }
 
 const VENUE_LABEL: Record<Venue, string> = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" };
@@ -247,6 +254,44 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
                 saving={saving}
                 onSave={(scope) => patch({ action: "setInstagramScope", igAccountId, ...scope })}
               />
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* Conversaciones pausadas por toma de control humano — cuando alguien
+          del equipo responde a mano desde la app, el bot se pausa 6h solo
+          para no pisarle la respuesta. Reanudar acá corta esa pausa antes. */}
+      <section className="rounded-2xl border border-foreground/10 p-6">
+        <h2 className="font-heading text-lg font-semibold text-foreground">Conversaciones pausadas (Instagram)</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Si alguien del equipo responde a mano un DM, el bot se pausa solo ahí por 6 horas para no pisarle la
+          respuesta. Reanúdalo antes si ya terminaron de atenderlo.
+        </p>
+        <div className="mt-4 space-y-2">
+          {state.pausedThreads.length === 0 ? (
+            <p className="text-sm text-foreground/50">No hay conversaciones pausadas ahora mismo.</p>
+          ) : (
+            state.pausedThreads.map((p) => (
+              <div
+                key={p.senderId}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-foreground/10 px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm text-foreground/80">{p.lastUserMessage ?? "(sin mensaje registrado)"}</p>
+                  <p className="mt-1 text-xs text-foreground/40">
+                    IGSID {p.senderId} · se reanuda solo{" "}
+                    {new Date(p.pausedUntil).toLocaleString("es-CL", { dateStyle: "short", timeStyle: "short" })}
+                  </p>
+                </div>
+                <button
+                  disabled={saving}
+                  onClick={() => patch({ action: "resumeInstagramThread", senderId: p.senderId })}
+                  className="shrink-0 rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  Reanudar ahora
+                </button>
+              </div>
             ))
           )}
         </div>

@@ -12,6 +12,7 @@ import {
   setInstagramScope,
 } from "@/lib/mandagroup-store";
 import { recentChats } from "@/lib/chat-log";
+import { listPausedThreads, resumeThread } from "@/lib/ig-history";
 
 // API del panel /eventos/admin — solo admin (config del negocio, no hay rol
 // "staff" acá). Mismo patrón que app/api/agenda/route.ts: GET trae el estado
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
   const user = await currentAdminUser(claveFromRequest(req));
   if (!user) return Response.json({ error: "No autorizado" }, { status: 401 });
 
-  const [reservasWhatsapp, events, stats, chats, instagramScopes] = await Promise.all([
+  const [reservasWhatsapp, events, stats, chats, instagramScopes, pausedThreads] = await Promise.all([
     getReservationNumber(),
     listEvents(),
     derivationStats(30),
@@ -37,6 +38,7 @@ export async function GET(req: Request) {
     // recientes primero para el panel.
     recentChats(24 * 7).then((list) => list.slice(-100).reverse()),
     getInstagramScopes(),
+    listPausedThreads(),
   ]);
   return Response.json({
     reservasWhatsapp,
@@ -47,6 +49,7 @@ export async function GET(req: Request) {
     // Las cuentas vienen de config (fijas por cliente), no de la DB — el panel
     // necesita saber cuáles existen para poder ofrecer un scope por cada una.
     instagramAccounts: clientConfig.instagramAccounts ?? {},
+    pausedThreads,
   });
 }
 
@@ -68,6 +71,7 @@ const patchSchema = z.discriminatedUnion("action", [
     venues: z.array(z.enum(["renaca", "vina"])).min(1),
     allowReservations: z.boolean(),
   }),
+  z.object({ action: z.literal("resumeInstagramThread"), senderId: z.string().min(1) }),
 ]);
 
 export async function PATCH(req: Request) {
@@ -85,12 +89,14 @@ export async function PATCH(req: Request) {
     await upsertEvent(parsed.data);
   } else if (parsed.data.action === "setEventActive") {
     await setEventActive(parsed.data.id, parsed.data.active);
-  } else {
+  } else if (parsed.data.action === "setInstagramScope") {
     await setInstagramScope(parsed.data.igAccountId, {
       enabled: parsed.data.enabled,
       venues: parsed.data.venues,
       allowReservations: parsed.data.allowReservations,
     });
+  } else {
+    await resumeThread(parsed.data.senderId);
   }
   return Response.json({ ok: true });
 }

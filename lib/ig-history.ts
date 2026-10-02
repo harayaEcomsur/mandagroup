@@ -154,3 +154,58 @@ export async function isHumanPaused(senderId: string): Promise<boolean> {
     }
   );
 }
+
+export interface PausedThread {
+  senderId: string;
+  pausedUntil: string;
+  lastUserMessage: string | null;
+}
+
+// Para el panel /eventos/admin: qué hilos están pausados ahora mismo por toma
+// de control humano, con el último mensaje del cliente como referencia (el
+// IGSID solo no dice nada reconocible).
+export async function listPausedThreads(): Promise<PausedThread[]> {
+  return withDb(
+    async () => {
+      const sql = db();
+      const rows = await sql`
+        SELECT sender_id, human_paused_until, turns
+        FROM ig_threads
+        WHERE human_paused_until > now()
+        ORDER BY human_paused_until DESC
+      `;
+      return rows.map((r) => {
+        const turns = (r.turns as IgTurn[] | null) ?? [];
+        const lastUser = [...turns].reverse().find((t) => t.role === "user");
+        return {
+          senderId: String(r.sender_id),
+          pausedUntil: new Date(r.human_paused_until as string).toISOString(),
+          lastUserMessage: lastUser?.content ?? null,
+        };
+      });
+    },
+    () =>
+      [...threads().entries()]
+        .filter(([, t]) => t.humanPausedUntil && t.humanPausedUntil > Date.now())
+        .map(([senderId, t]) => ({
+          senderId,
+          pausedUntil: new Date(t.humanPausedUntil as number).toISOString(),
+          lastUserMessage: [...t.turns].reverse().find((turn) => turn.role === "user")?.content ?? null,
+        }))
+  );
+}
+
+// Reanudar antes de que se cumplan las 6h — ej. el equipo ya terminó de
+// atender a mano y quiere que el bot vuelva a responder esa conversación.
+export async function resumeThread(senderId: string): Promise<void> {
+  await withDb(
+    async () => {
+      const sql = db();
+      await sql`UPDATE ig_threads SET human_paused_until = NULL WHERE sender_id = ${senderId}`;
+    },
+    () => {
+      const t = threads().get(senderId);
+      if (t) t.humanPausedUntil = undefined;
+    }
+  );
+}
