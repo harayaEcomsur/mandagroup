@@ -13,6 +13,32 @@ function messageText(parts: { type: string; text?: string }[]): string {
     .join("");
 }
 
+// Botones específicos según qué tool de derivación usó el asistente en esta
+// respuesta (ver lib/mandagroup-tools.ts) — así el chat pasa de "las 3
+// opciones" a "la que corresponde" en cuanto el cliente precisa qué quiere,
+// en vez de mostrar siempre las mismas 3 sin importar la pregunta.
+type ToolPart = { type: string; state?: string; output?: unknown };
+
+function toolActionButtons(parts: ToolPart[]): { label: string; url: string }[] {
+  const buttons: { label: string; url: string }[] = [];
+  for (const part of parts) {
+    if (part.state !== "output-available") continue;
+    if (part.type === "tool-derivar_invitacion") {
+      const out = part.output as { local?: string; link_entradas?: string } | undefined;
+      if (out?.link_entradas) {
+        buttons.push({ label: out.local ? `Comprar entrada — ${out.local}` : "Comprar entrada", url: out.link_entradas });
+      }
+    }
+    if (part.type === "tool-derivar_reserva") {
+      const out = part.output as { local?: string; whatsapp_link?: string } | undefined;
+      if (out?.whatsapp_link) {
+        buttons.push({ label: out.local ? `Reservar mesa — ${out.local}` : "Reservar mesa", url: out.whatsapp_link });
+      }
+    }
+  }
+  return buttons;
+}
+
 export function ChatWidget({
   businessName,
   stacked,
@@ -28,6 +54,10 @@ export function ChatWidget({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const isLoading = status === "submitted" || status === "streaming";
+
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  const dynamicButtons = lastAssistant ? toolActionButtons(lastAssistant.parts as ToolPart[]) : [];
+  const buttonsToShow = dynamicButtons.length > 0 ? dynamicButtons : actionButtons;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,12 +105,13 @@ export function ChatWidget({
               </div>
             )}
           </div>
-          {/* Siempre visibles (no solo tras una respuesta): mismo criterio que
-              los botones del bot de Instagram — la persona nunca se queda sin
-              un siguiente paso concreto al que ir. */}
-          {actionButtons && actionButtons.length > 0 && (
+          {/* Siempre hay algo que ofrecer (mismo criterio que el bot de
+              Instagram): al principio, o si la pregunta fue genérica, las 3
+              opciones; en cuanto el asistente resuelve una reserva o una
+              entrada puntual (ver toolActionButtons), solo esa. */}
+          {buttonsToShow && buttonsToShow.length > 0 && (
             <div className="flex flex-wrap gap-1.5 border-t border-black/10 px-3 py-2">
-              {actionButtons.map((b) => (
+              {buttonsToShow.map((b) => (
                 <a
                   key={b.url}
                   href={b.url}
