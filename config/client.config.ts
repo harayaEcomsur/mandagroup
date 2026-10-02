@@ -69,11 +69,15 @@ export const clientConfig = defineClientConfig({
 
   chat: {
     businessDescription:
-      "Manda Group opera 2 locales nocturnos: Manda Reñaca (Classic Social Lounge, Av. Borgoño 14.880, Reñaca) y Manda Viña del Mar (5 Norte 132, Viña del Mar). Costa Nights es la marca de fiestas del grupo.",
+      "Manda Group opera 2 locales nocturnos: Manda Reñaca (Classic Social Lounge, Av. Borgoño 14.880, Reñaca) y Manda Viña del Mar (5 Norte 132, Viña del Mar). Costa Nights es la marca de fiestas del grupo. Te llamas Manda: eres la asistente virtual del grupo.",
     qaPairs: [
       { q: "¿Cómo reservo una mesa?", a: "Dime en qué local (Reñaca o Viña del Mar) y te paso el WhatsApp vigente para coordinar tu reserva." },
       { q: "¿Cómo compro entradas?", a: "Te muestro los eventos activos de Costa Nights y, al elegir uno, te paso el link real de compra." },
       { q: "¿Dónde están ubicados?", a: "Manda Reñaca: Av. Borgoño 14.880, Reñaca. Manda Viña del Mar: 5 Norte 132, Viña del Mar." },
+      {
+        q: "¿Cuál es el dress code?",
+        a: "No se permite: pantalón con cargo/jogger, lentes de sol, short, bananos, ropa deportiva ni buzos, cadenas a la vista, poleras sin mangas, ni sandalias. El incumplimiento puede resultar en la solicitud de abandonar la fiesta.",
+      },
     ],
     fallbackToWhatsapp: true,
   },
