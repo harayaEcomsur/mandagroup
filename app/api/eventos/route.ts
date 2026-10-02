@@ -64,6 +64,7 @@ const patchSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("setInstagramScope"),
     igAccountId: z.string().min(1),
+    enabled: z.boolean(),
     venues: z.array(z.enum(["renaca", "vina"])).min(1),
     allowReservations: z.boolean(),
   }),
@@ -86,6 +87,7 @@ export async function PATCH(req: Request) {
     await setEventActive(parsed.data.id, parsed.data.active);
   } else {
     await setInstagramScope(parsed.data.igAccountId, {
+      enabled: parsed.data.enabled,
       venues: parsed.data.venues,
       allowReservations: parsed.data.allowReservations,
     });

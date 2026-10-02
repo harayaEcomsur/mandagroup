@@ -38,6 +38,7 @@ interface ChatEntry {
 }
 
 interface InstagramScope {
+  enabled: boolean;
   venues: Venue[];
   allowReservations: boolean;
 }
@@ -61,7 +62,7 @@ const IG_ACCOUNT_LABEL: Record<string, string> = {
   "17841421479976537": "@mandavina.cl (Viña del Mar)",
 };
 
-const UNRESTRICTED: InstagramScope = { venues: ["renaca", "vina"], allowReservations: true };
+const UNRESTRICTED: InstagramScope = { enabled: true, venues: ["renaca", "vina"], allowReservations: true };
 
 // Panel de administración del módulo eventos: número de reservas, eventos
 // activos (link de entradas editable) y estadísticas de derivaciones — mismo
@@ -360,31 +361,53 @@ function InstagramScopeRow({
 
   return (
     <div className="rounded-lg border border-foreground/10 px-4 py-3">
-      <p className="text-sm font-medium text-foreground">
-        {label} <span className="font-normal text-foreground/40">· {igAccountId}</span>
-      </p>
-      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-medium text-foreground">
+          {label} <span className="font-normal text-foreground/40">· {igAccountId}</span>
+        </p>
+        {/* Activo/inactivo primero y aparte: apaga el asistente del todo para
+            esta cuenta (ni responde) — lo demás deja de importar si está apagada. */}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={draft.enabled}
+              onChange={(e) => setDraft((d) => ({ ...d, enabled: e.target.checked }))}
+            />
+            <span className={draft.enabled ? "text-primary" : "text-foreground/50"}>
+              {draft.enabled ? "Activo" : "Inactivo — no responde"}
+            </span>
+          </label>
+          <button
+            disabled={saving || !dirty}
+            onClick={() => onSave(draft)}
+            className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+      <div className={`mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm ${draft.enabled ? "" : "opacity-40"}`}>
         {(["renaca", "vina"] as const).map((v) => (
           <label key={v} className="flex items-center gap-2 text-foreground/80">
-            <input type="checkbox" checked={draft.venues.includes(v)} onChange={() => toggleVenue(v)} />
+            <input
+              type="checkbox"
+              disabled={!draft.enabled}
+              checked={draft.venues.includes(v)}
+              onChange={() => toggleVenue(v)}
+            />
             {VENUE_LABEL[v]}
           </label>
         ))}
         <label className="flex items-center gap-2 text-foreground/80">
           <input
             type="checkbox"
+            disabled={!draft.enabled}
             checked={draft.allowReservations}
             onChange={(e) => setDraft((d) => ({ ...d, allowReservations: e.target.checked }))}
           />
           Permite reservas de mesa
         </label>
-        <button
-          disabled={saving || !dirty}
-          onClick={() => onSave(draft)}
-          className="ml-auto rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
-        >
-          Guardar
-        </button>
       </div>
     </div>
   );

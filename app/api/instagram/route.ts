@@ -239,9 +239,17 @@ export async function POST(req: Request) {
     // `recipient.id` es la cuenta de Instagram que recibió el mensaje — con
     // varias cuentas conectadas a la misma app, decide con cuál responder.
     const igAccountId: string | undefined = messaging.recipient?.id;
+    const scope = await getInstagramScope(igAccountId);
+
+    // Cuenta desactivada desde /eventos/admin: no responde nada — queda para
+    // que el equipo la atienda a mano, sin el asistente de por medio.
+    if (scope?.enabled === false) {
+      console.log("[instagram webhook] cuenta desactivada, no se responde", { igAccountId });
+      return Response.json({ ok: true, note: "cuenta desactivada" });
+    }
+
     const token = resolveInstagramToken(igAccountId);
     const senderName = await resolveInstagramSenderName(from, token);
-    const scope = await getInstagramScope(igAccountId);
     console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, senderName, scope, userText });
 
     // Historial corto por IGSID: permite completar el flujo de agendar en

@@ -43,7 +43,10 @@ const INSTAGRAM_SCOPES_KEY = "mandagroup_instagram_scopes";
 // Qué puede ofrecer el asistente en una cuenta de Instagram puntual — sin
 // scope guardado para esa cuenta (el caso por defecto), no hay restricción:
 // ambos locales y reservas, igual que hoy. Editable desde /eventos/admin.
+// `enabled: false` apaga el asistente del todo para esa cuenta (ni responde) —
+// para cuando el equipo prefiere atenderla a mano por un tiempo.
 export interface InstagramScope {
+  enabled: boolean;
   venues: Venue[];
   allowReservations: boolean;
 }
