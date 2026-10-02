@@ -37,14 +37,31 @@ interface ChatEntry {
   assistantText: string;
 }
 
+interface InstagramScope {
+  venues: Venue[];
+  allowReservations: boolean;
+}
+
 interface State {
   reservasWhatsapp: string | null;
   events: MandagroupEvent[];
   stats: DerivationStats;
   chats: ChatEntry[];
+  instagramScopes: Record<string, InstagramScope>;
+  instagramAccounts: Record<string, string>;
 }
 
 const VENUE_LABEL: Record<Venue, string> = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" };
+
+// Cuentas reales de Instagram de este cliente (mismos IDs que
+// config/client.config.ts → instagramAccounts) — solo para mostrar un nombre
+// reconocible en vez del ID numérico crudo.
+const IG_ACCOUNT_LABEL: Record<string, string> = {
+  "17841462428914603": "@manda.chile (Reñaca)",
+  "17841421479976537": "@mandavina.cl (Viña del Mar)",
+};
+
+const UNRESTRICTED: InstagramScope = { venues: ["renaca", "vina"], allowReservations: true };
 
 // Panel de administración del módulo eventos: número de reservas, eventos
 // activos (link de entradas editable) y estadísticas de derivaciones — mismo
@@ -207,6 +224,33 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
         </div>
       </section>
 
+      {/* Alcance por cuenta de Instagram — acota qué local(es) y si ofrece
+          reservas, por si una cuenta (ej. @mandavina.cl) debe responder solo
+          de su propio local, sin mencionar el otro ni derivar reservas. */}
+      <section className="rounded-2xl border border-foreground/10 p-6">
+        <h2 className="font-heading text-lg font-semibold text-foreground">Instagram por cuenta</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Sin tocar nada acá, cada cuenta responde de ambos locales y ofrece reservas — normal. Acótala solo si
+          quieres que una cuenta puntual hable nada más que de su propio local.
+        </p>
+        <div className="mt-4 space-y-4">
+          {Object.keys(state.instagramAccounts).length === 0 ? (
+            <p className="text-sm text-foreground/50">No hay cuentas de Instagram configuradas.</p>
+          ) : (
+            Object.keys(state.instagramAccounts).map((igAccountId) => (
+              <InstagramScopeRow
+                key={igAccountId}
+                igAccountId={igAccountId}
+                label={IG_ACCOUNT_LABEL[igAccountId] ?? igAccountId}
+                initial={state.instagramScopes[igAccountId] ?? UNRESTRICTED}
+                saving={saving}
+                onSave={(scope) => patch({ action: "setInstagramScope", igAccountId, ...scope })}
+              />
+            ))
+          )}
+        </div>
+      </section>
+
       {/* Estadísticas (equivalente a ManyChat) */}
       <section className="rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Estadísticas (últimos 30 días)</h2>
@@ -283,6 +327,65 @@ function Stat({ label, value }: { label: string; value: number }) {
     <div className="rounded-xl border border-foreground/10 p-4">
       <p className="text-2xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-foreground/60">{label}</p>
+    </div>
+  );
+}
+
+// Borrador editable del scope de una cuenta — solo se guarda al tocar
+// "Guardar", así no se dispara un PATCH por cada click de checkbox.
+function InstagramScopeRow({
+  igAccountId,
+  label,
+  initial,
+  saving,
+  onSave,
+}: {
+  igAccountId: string;
+  label: string;
+  initial: InstagramScope;
+  saving: boolean;
+  onSave: (scope: InstagramScope) => void;
+}) {
+  const [draft, setDraft] = useState<InstagramScope>(initial);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+
+  function toggleVenue(v: Venue) {
+    setDraft((d) => {
+      const has = d.venues.includes(v);
+      const venues = has ? d.venues.filter((x) => x !== v) : [...d.venues, v];
+      // Al menos un local siempre tiene que quedar seleccionado.
+      return venues.length ? { ...d, venues } : d;
+    });
+  }
+
+  return (
+    <div className="rounded-lg border border-foreground/10 px-4 py-3">
+      <p className="text-sm font-medium text-foreground">
+        {label} <span className="font-normal text-foreground/40">· {igAccountId}</span>
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        {(["renaca", "vina"] as const).map((v) => (
+          <label key={v} className="flex items-center gap-2 text-foreground/80">
+            <input type="checkbox" checked={draft.venues.includes(v)} onChange={() => toggleVenue(v)} />
+            {VENUE_LABEL[v]}
+          </label>
+        ))}
+        <label className="flex items-center gap-2 text-foreground/80">
+          <input
+            type="checkbox"
+            checked={draft.allowReservations}
+            onChange={(e) => setDraft((d) => ({ ...d, allowReservations: e.target.checked }))}
+          />
+          Permite reservas de mesa
+        </label>
+        <button
+          disabled={saving || !dirty}
+          onClick={() => onSave(draft)}
+          className="ml-auto rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+        >
+          Guardar
+        </button>
+      </div>
     </div>
   );
 }

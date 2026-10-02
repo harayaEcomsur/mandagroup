@@ -364,8 +364,17 @@ export const clientConfigSchema = z.object({
   // Botones de acción que se envían junto con cada respuesta de Instagram
   // Direct (ej. link a venta de entradas, reserva). Máximo 3 — límite del
   // button template de Meta. Sin esto, /api/instagram solo manda el texto.
+  // `kind` es opcional y solo lo usan clientes con alcance por cuenta
+  // (ver InstagramScope en lib/mandagroup-store.ts): identifica qué botón es
+  // de qué local/reserva para poder ocultarlo según la cuenta que respondió.
   instagramActionButtons: z
-    .array(z.object({ title: z.string().max(20), url: z.string().url() }))
+    .array(
+      z.object({
+        title: z.string().max(20),
+        url: z.string().url(),
+        kind: z.enum(["tickets-renaca", "tickets-vina", "reserva"]).optional(),
+      })
+    )
     .max(3)
     .optional(),
 

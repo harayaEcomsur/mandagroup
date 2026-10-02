@@ -8,6 +8,8 @@ import {
   upsertEvent,
   setEventActive,
   derivationStats,
+  getInstagramScopes,
+  setInstagramScope,
 } from "@/lib/mandagroup-store";
 import { recentChats } from "@/lib/chat-log";
 
@@ -26,7 +28,7 @@ export async function GET(req: Request) {
   const user = await currentAdminUser(claveFromRequest(req));
   if (!user) return Response.json({ error: "No autorizado" }, { status: 401 });
 
-  const [reservasWhatsapp, events, stats, chats] = await Promise.all([
+  const [reservasWhatsapp, events, stats, chats, instagramScopes] = await Promise.all([
     getReservationNumber(),
     listEvents(),
     derivationStats(30),
@@ -34,8 +36,18 @@ export async function GET(req: Request) {
     // fuente que ya alimenta el resumen diario, ver lib/chat-log.ts. Más
     // recientes primero para el panel.
     recentChats(24 * 7).then((list) => list.slice(-100).reverse()),
+    getInstagramScopes(),
   ]);
-  return Response.json({ reservasWhatsapp, events, stats, chats });
+  return Response.json({
+    reservasWhatsapp,
+    events,
+    stats,
+    chats,
+    instagramScopes,
+    // Las cuentas vienen de config (fijas por cliente), no de la DB — el panel
+    // necesita saber cuáles existen para poder ofrecer un scope por cada una.
+    instagramAccounts: clientConfig.instagramAccounts ?? {},
+  });
 }
 
 const patchSchema = z.discriminatedUnion("action", [
@@ -49,6 +61,12 @@ const patchSchema = z.discriminatedUnion("action", [
     ticketUrl: z.string().url(),
   }),
   z.object({ action: z.literal("setEventActive"), id: z.string(), active: z.boolean() }),
+  z.object({
+    action: z.literal("setInstagramScope"),
+    igAccountId: z.string().min(1),
+    venues: z.array(z.enum(["renaca", "vina"])).min(1),
+    allowReservations: z.boolean(),
+  }),
 ]);
 
 export async function PATCH(req: Request) {
@@ -64,8 +82,13 @@ export async function PATCH(req: Request) {
     await setReservationNumber(parsed.data.phone);
   } else if (parsed.data.action === "upsertEvent") {
     await upsertEvent(parsed.data);
-  } else {
+  } else if (parsed.data.action === "setEventActive") {
     await setEventActive(parsed.data.id, parsed.data.active);
+  } else {
+    await setInstagramScope(parsed.data.igAccountId, {
+      venues: parsed.data.venues,
+      allowReservations: parsed.data.allowReservations,
+    });
   }
   return Response.json({ ok: true });
 }

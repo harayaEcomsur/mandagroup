@@ -7,6 +7,7 @@ import { buildAgendaTools } from "@/lib/chat-tools";
 import { buildLeadTools } from "@/lib/lead-tools";
 import { buildStoreTools } from "@/lib/store-tools";
 import { buildMandagroupTools } from "@/lib/mandagroup-tools";
+import { getInstagramScope, type InstagramScope } from "@/lib/mandagroup-store";
 import { logChat } from "@/lib/chat-log";
 import { getHistory, appendHistory } from "@/lib/ig-history";
 
@@ -165,6 +166,24 @@ async function sendInstagramButtons(
   return res.ok;
 }
 
+const VENUE_LABEL = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" } as const;
+
+// Botones sin `kind` (clientes que no usan alcance por cuenta) siempre se
+// muestran — el filtro solo actúa cuando hay un scope guardado para la cuenta.
+function filterButtonsByScope(
+  buttons: { title: string; url: string; kind?: "tickets-renaca" | "tickets-vina" | "reserva" }[] | undefined,
+  scope: InstagramScope | undefined,
+): { title: string; url: string }[] {
+  if (!buttons?.length) return [];
+  if (!scope) return buttons;
+  return buttons.filter((b) => {
+    if (b.kind === "reserva") return scope.allowReservations;
+    if (b.kind === "tickets-renaca") return scope.venues.includes("renaca");
+    if (b.kind === "tickets-vina") return scope.venues.includes("vina");
+    return true;
+  });
+}
+
 export async function POST(req: Request) {
   // Siempre responder 200 rápido: si Meta recibe errores, reintenta y puede
   // desactivar el webhook. Los problemas se registran en logs, no en el status.
@@ -222,7 +241,8 @@ export async function POST(req: Request) {
     const igAccountId: string | undefined = messaging.recipient?.id;
     const token = resolveInstagramToken(igAccountId);
     const senderName = await resolveInstagramSenderName(from, token);
-    console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, senderName, userText });
+    const scope = await getInstagramScope(igAccountId);
+    console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, senderName, scope, userText });
 
     // Historial corto por IGSID: permite completar el flujo de agendar en
     // varios mensajes (servicio → hora → nombre) como en el chat del sitio.
@@ -234,17 +254,30 @@ export async function POST(req: Request) {
         "\n\nEstás respondiendo por Instagram Direct: sé especialmente breve (2-4 frases), sin markdown ni asteriscos. Si el cliente necesita atención humana, dile que alguien del equipo le responderá por este mismo chat." +
         (senderName
           ? `\n\nEl nombre de quien te escribe es "${senderName}" — salúdalo(a) por su nombre en vez de usar un mote genérico, y úsalo también más adelante en la conversación si se da natural (sin forzarlo en cada frase).`
+          : "") +
+        (scope
+          ? `\n\nIMPORTANTE: esta cuenta de Instagram es solo de ${scope.venues
+              .map((v) => VENUE_LABEL[v])
+              .join(" y ")} — nunca menciones, ofrezcas ni derives al otro local.${
+              scope.allowReservations ? "" : " Tampoco ofrezcas reservas de mesa: no se coordinan por este canal, solo entradas/eventos."
+            }`
           : ""),
       messages: [...history, { role: "user", content: userText }],
       maxOutputTokens: clientConfig.chat.maxTokensPerReply,
-      tools: { ...buildAgendaTools(), ...buildLeadTools(), ...buildStoreTools(), ...buildMandagroupTools("instagram", userText) },
+      tools: {
+        ...buildAgendaTools(),
+        ...buildLeadTools(),
+        ...buildStoreTools(),
+        ...buildMandagroupTools("instagram", userText, scope),
+      },
       stopWhen: stepCountIs(5),
     });
 
     if (text?.trim()) {
       await sendInstagramText(from, text.trim(), token);
-      if (clientConfig.instagramActionButtons?.length) {
-        await sendInstagramButtons(from, clientConfig.instagramActionButtons, token);
+      const buttons = filterButtonsByScope(clientConfig.instagramActionButtons, scope);
+      if (buttons.length) {
+        await sendInstagramButtons(from, buttons, token);
       }
       await appendHistory(from, { role: "user", content: userText }, { role: "assistant", content: text.trim() });
       logChat({ canal: "instagram", userText, assistantText: text.trim() });

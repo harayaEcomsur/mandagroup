@@ -96,9 +96,9 @@ export const clientConfig = defineClientConfig({
   // Se envían siempre junto con la respuesta del asistente en Instagram
   // Direct, para no depender de que la IA "adivine" ofrecerlos.
   instagramActionButtons: [
-    { title: "Entradas Reñaca", url: "https://vesti.cl/company/manda-renaca" },
-    { title: "Entradas Viña", url: "https://vesti.cl/company/manda-group-vina" },
-    { title: "Reservar mesa", url: "https://wa.me/56990721033" },
+    { title: "Entradas Reñaca", url: "https://vesti.cl/company/manda-renaca", kind: "tickets-renaca" },
+    { title: "Entradas Viña", url: "https://vesti.cl/company/manda-group-vina", kind: "tickets-vina" },
+    { title: "Reservar mesa", url: "https://wa.me/56990721033", kind: "reserva" },
   ],
 
   // Mismos 3 links, mostrados como botones en el chat del sitio (ver ChatWidget).

@@ -38,18 +38,28 @@ export interface Derivation {
 }
 
 const RESERVAS_WHATSAPP_KEY = "mandagroup_reservas_whatsapp";
+const INSTAGRAM_SCOPES_KEY = "mandagroup_instagram_scopes";
+
+// Qué puede ofrecer el asistente en una cuenta de Instagram puntual — sin
+// scope guardado para esa cuenta (el caso por defecto), no hay restricción:
+// ambos locales y reservas, igual que hoy. Editable desde /eventos/admin.
+export interface InstagramScope {
+  venues: Venue[];
+  allowReservations: boolean;
+}
 
 interface Store {
   reservasWhatsapp: string | null;
   events: MandagroupEvent[];
   derivations: (Derivation & { createdAt: string })[];
+  instagramScopes: Record<string, InstagramScope>;
 }
 
 const g = globalThis as unknown as { __mandagroupStore?: Store };
 
 function store(): Store {
   if (!g.__mandagroupStore) {
-    g.__mandagroupStore = { reservasWhatsapp: null, events: [], derivations: [] };
+    g.__mandagroupStore = { reservasWhatsapp: null, events: [], derivations: [], instagramScopes: {} };
   }
   return g.__mandagroupStore;
 }
@@ -90,6 +100,46 @@ export async function setReservationNumber(phone: string): Promise<void> {
     },
     () => {
       store().reservasWhatsapp = phone;
+    }
+  );
+}
+
+// --- Alcance por cuenta de Instagram (qué local(es) y si ofrece reservas) ---
+// Un solo row en `settings` con un mapa {igAccountId: scope} — hay a lo más un
+// puñado de cuentas de Instagram, no justifica una tabla propia.
+
+export async function getInstagramScopes(): Promise<Record<string, InstagramScope>> {
+  return withDb(
+    async () => {
+      const sql = db();
+      const rows = await sql`SELECT value FROM settings WHERE key = ${INSTAGRAM_SCOPES_KEY} LIMIT 1`;
+      return (rows[0]?.value as Record<string, InstagramScope> | undefined) ?? {};
+    },
+    () => store().instagramScopes
+  );
+}
+
+// `undefined`/sin entry significa sin restricción (ambos locales + reservas) —
+// el comportamiento de siempre para cualquier cuenta que no se haya tocado.
+export async function getInstagramScope(igAccountId: string | undefined): Promise<InstagramScope | undefined> {
+  if (!igAccountId) return undefined;
+  const scopes = await getInstagramScopes();
+  return scopes[igAccountId];
+}
+
+export async function setInstagramScope(igAccountId: string, scope: InstagramScope): Promise<void> {
+  const current = await getInstagramScopes();
+  const next = { ...current, [igAccountId]: scope };
+  await withDb(
+    async () => {
+      const sql = db();
+      await sql`
+        INSERT INTO settings (key, value) VALUES (${INSTAGRAM_SCOPES_KEY}, ${jsonb(next)})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `;
+    },
+    () => {
+      store().instagramScopes = next;
     }
   );
 }
