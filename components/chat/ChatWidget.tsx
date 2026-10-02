@@ -57,7 +57,9 @@ export function ChatWidget({
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const dynamicButtons = lastAssistant ? toolActionButtons(lastAssistant.parts as ToolPart[]) : [];
-  const buttonsToShow = dynamicButtons.length > 0 ? dynamicButtons : actionButtons;
+  // Nada de botones antes de que la persona escriba algo — recién tienen
+  // sentido como respuesta a una pregunta, no como adorno de la pantalla vacía.
+  const buttonsToShow = messages.length === 0 ? [] : dynamicButtons.length > 0 ? dynamicButtons : actionButtons;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -130,7 +132,7 @@ export function ChatWidget({
               onChange={(e) => setInput(e.target.value)}
               placeholder="Escribe tu mensaje…"
               aria-label="Mensaje"
-              className="flex-1 rounded-full border border-black/10 px-3 py-2 text-sm outline-none focus:border-primary"
+              className="flex-1 rounded-full border border-black/10 bg-transparent px-3 py-2 text-sm text-foreground caret-foreground outline-none placeholder:text-foreground/40 focus:border-primary"
             />
             <button type="submit" aria-label="Enviar" className="rounded-full bg-primary p-2 text-white">
               <Send size={16} />

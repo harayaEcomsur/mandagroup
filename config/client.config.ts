@@ -26,7 +26,10 @@ export const clientConfig = defineClientConfig({
       background: "#0A0A0C",
       foreground: "#F5F1E8",
     },
-    fontPairing: "modern",
+    // "lujo" (Playfair Display + Inter): recomendado por ui-ux-pro-max para un
+    // holding gastronómico/nocturno premium — "modern" (Poppins) se sentía
+    // genérico tipo SaaS para una marca de restaurantes y fiestas.
+    fontPairing: "lujo",
     logoIncludesName: true,
     layout: "clasico",
     credit: true,
@@ -35,7 +38,7 @@ export const clientConfig = defineClientConfig({
   // Home bespoke (MandagroupHome.tsx): estos campos igual alimentan el
   // asistente/SEO, aunque el hero visual de la home no los renderice literal.
   hero: {
-    title: "Dos locales, una misma noche",
+    title: "Gastronomía, música y fiesta bajo un mismo grupo",
     subtitle: "Manda Reñaca y Manda Viña del Mar — reserva tu mesa o compra tu entrada directo por WhatsApp.",
     ctaLabel: "Reservar por WhatsApp",
     ctaHref: "#contacto",
@@ -45,7 +48,7 @@ export const clientConfig = defineClientConfig({
 
   about: {
     title: "Manda Group",
-    body: "Manda Reñaca (Classic Social Lounge) y Manda Viña del Mar (fiesta, restaurant, música y amigos) — los locales del grupo, con la marca de fiestas Costa Nights.",
+    body: "Manda Reñaca (Classic Social Lounge) y Manda Viña del Mar (fiesta, restaurant, música y amigos) — los locales del grupo, con la marca de fiestas Costa Nights. El holding también reúne otras marcas gastronómicas, como Costa Sushi y Carbon.",
   },
 
   contact: {

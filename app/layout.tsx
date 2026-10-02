@@ -15,7 +15,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang={clientConfig.meta.locale}
       className={fontVariables}
-      style={paletteToCssVars(clientConfig.branding.palette)}
+      // El sitio es de tema oscuro (fondo casi negro); sin esto, Safari/Chrome
+      // móvil renderizan inputs y otros controles nativos con su chrome claro
+      // por defecto — fondo blanco con texto que hereda el color claro de la
+      // página, prácticamente invisible.
+      style={{ colorScheme: "dark", ...paletteToCssVars(clientConfig.branding.palette) }}
     >
       <body>
         {children}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { clientConfig } from "@/config/client.config";
 import { Container } from "@/components/ui/Container";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
@@ -22,6 +23,14 @@ const VENUES = [
   },
 ];
 
+// Otras marcas gastronómicas del holding — solo vitrina (logo real + rubro),
+// sin dirección ni link: a diferencia de los 2 locales de arriba, estas no
+// pasan por el asistente/reservas todavía, así que no se les ofrece una acción.
+const OTHER_BRANDS = [
+  { name: "Costa Sushi", tag: "Bar & Delivery", logo: "/clients/mandagroup/logo-costa-sushi.png" },
+  { name: "Carbon", tag: "Carnes & Parrilla", logo: "/clients/mandagroup/logo-carbon.png" },
+];
+
 // Home a medida de Mandagroup: no pasa por components/HomeContent.tsx (hero +
 // servicios + about estáticos desde el config) porque acá el contenido central
 // — los eventos activos — es dinámico desde la base y se administra en
@@ -35,14 +44,24 @@ export async function MandagroupHome() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-background py-24 sm:py-32">
-        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="pointer-events-none absolute -bottom-24 left-0 h-72 w-72 rounded-full bg-accent/20 blur-[110px]" />
+      {/* Hero — foto real (coctelería de uno de los locales, mandagroup.cl) en
+          vez de los blobs de color genéricos: un holding gastronómico se vende
+          con su propia ambientación, no con formas abstractas. */}
+      <section className="relative overflow-hidden py-28 sm:py-40">
+        <Image
+          src="/clients/mandagroup/hero-cocktails.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover"
+        />
+        {/* Scrim oscuro: suficiente contraste para el texto sin perder la foto. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
+        <div className="absolute inset-0 bg-background/20" />
         <Container className="relative text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">Manda Group</p>
           <h1 className="mx-auto mt-5 max-w-2xl font-heading text-4xl font-bold leading-tight text-foreground sm:text-6xl">
-            Dos locales, una misma noche
+            Gastronomía, música y fiesta bajo un mismo grupo
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-foreground/70 sm:text-lg">
             Manda Reñaca y Manda Viña del Mar — reserva tu mesa o compra tu entrada directo por WhatsApp, sin
@@ -91,6 +110,42 @@ export async function MandagroupHome() {
                 >
                   Ver Instagram
                 </a>
+              </div>
+            ))}
+          </div>
+        </Container>
+      </section>
+
+      {/* Más marcas del grupo — vitrina del holding (restaurantes), separada
+          de los 2 locales de arriba porque esas sí se reservan por acá; estas
+          solo se muestran para transmitir la escala real del grupo. */}
+      <section className="relative overflow-hidden py-20 sm:py-28">
+        <Image
+          src="/clients/mandagroup/costa-sushi.jpg"
+          alt=""
+          fill
+          className="object-cover opacity-[0.07]"
+        />
+        <Container className="relative">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">El grupo</p>
+          <h2 className="mt-3 max-w-xl font-heading text-3xl font-bold text-foreground sm:text-4xl">
+            Más marcas de Manda Group
+          </h2>
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-foreground/60">
+            Además de nuestros 2 locales nocturnos, el grupo reúne otras marcas gastronómicas.
+          </p>
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {OTHER_BRANDS.map((b) => (
+              <div
+                key={b.name}
+                className="flex items-center gap-5 rounded-2xl border border-foreground/10 bg-foreground/[0.03] p-7"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- mismo patrón que los logos de VENUES arriba */}
+                <img src={b.logo} alt={b.name} className="h-14 w-auto max-w-[9rem] object-contain" />
+                <div>
+                  <h3 className="font-heading text-base font-semibold text-foreground">{b.name}</h3>
+                  <p className="mt-0.5 text-sm text-foreground/60">{b.tag}</p>
+                </div>
               </div>
             ))}
           </div>
