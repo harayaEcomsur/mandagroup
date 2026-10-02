@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db, jsonb, withDb } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth";
@@ -11,15 +12,23 @@ import type { SessionUser } from "@/lib/auth";
 // rounds). `verifyAdminCredential` es la única función que compara una
 // contraseña real contra el hash, y lo hace con bcrypt.compare (resistente a
 // timing attacks), nunca con un === directo.
+//
+// Alta de una cuenta nueva: `inviteAdmin` crea la cuenta SIN contraseña (la
+// persona todavía no puede entrar) y devuelve un token de un solo uso. La
+// persona entra a /eventos/admin/setup?token=... y ahí mismo escribe o genera
+// su propia contraseña — nunca pasa por nosotros ni queda en este chat.
 
 export interface AdminCredential {
   username: string;
   email: string;
-  passwordHash: string;
+  passwordHash: string | null;
   role: "admin" | "staff";
+  setupToken: string | null;
+  setupTokenExpiresAt: string | null;
 }
 
 const KEY = "admin_credentials";
+const SETUP_TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 horas para crear la contraseña
 
 const g = globalThis as unknown as { __adminCredentials?: AdminCredential[] };
 
@@ -54,9 +63,49 @@ async function saveCredentials(list: AdminCredential[]): Promise<void> {
   );
 }
 
-// Crea o reemplaza la credencial de un usuario (por username) — usado para
-// dar de alta la primera cuenta y para que, más adelante, el propio dueño
-// pueda rotar su contraseña sin pedírmela a mí.
+// Crea la cuenta SIN contraseña y devuelve el token de configuración — la
+// contraseña la define la propia persona en /eventos/admin/setup?token=...,
+// nunca pasa por quien invita.
+export async function inviteAdmin(input: { username: string; email: string; role?: "admin" | "staff" }): Promise<string> {
+  const setupToken = randomBytes(32).toString("hex");
+  const list = await listCredentials();
+  const next = list.filter((c) => c.username.toLowerCase() !== input.username.toLowerCase());
+  next.push({
+    username: input.username,
+    email: input.email,
+    passwordHash: null,
+    role: input.role ?? "admin",
+    setupToken,
+    setupTokenExpiresAt: new Date(Date.now() + SETUP_TOKEN_TTL_MS).toISOString(),
+  });
+  await saveCredentials(next);
+  return setupToken;
+}
+
+export async function findBySetupToken(token: string): Promise<AdminCredential | null> {
+  if (!token) return null;
+  const match = (await listCredentials()).find((c) => c.setupToken === token);
+  if (!match || !match.setupTokenExpiresAt) return null;
+  if (new Date(match.setupTokenExpiresAt).getTime() < Date.now()) return null;
+  return match;
+}
+
+// La persona invitada define su propia contraseña acá — primera vez que se
+// guarda un hash para esa cuenta. El token se consume (no sirve dos veces).
+export async function completeSetup(token: string, password: string): Promise<SessionUser | null> {
+  const credential = await findBySetupToken(token);
+  if (!credential) return null;
+  const passwordHash = await bcrypt.hash(password, 12);
+  const list = await listCredentials();
+  const next = list.map((c) =>
+    c.username === credential.username ? { ...c, passwordHash, setupToken: null, setupTokenExpiresAt: null } : c
+  );
+  await saveCredentials(next);
+  return { email: credential.email, role: credential.role };
+}
+
+// Para que la propia persona pueda rotar su contraseña ya sabiendo la
+// anterior (a diferencia de inviteAdmin, que es solo para la primera vez).
 export async function setAdminCredential(input: {
   username: string;
   email: string;
@@ -66,7 +115,7 @@ export async function setAdminCredential(input: {
   const passwordHash = await bcrypt.hash(input.password, 12);
   const list = await listCredentials();
   const next = list.filter((c) => c.username.toLowerCase() !== input.username.toLowerCase());
-  next.push({ username: input.username, email: input.email, passwordHash, role: input.role ?? "admin" });
+  next.push({ username: input.username, email: input.email, passwordHash, role: input.role ?? "admin", setupToken: null, setupTokenExpiresAt: null });
   await saveCredentials(next);
 }
 
@@ -75,8 +124,14 @@ export async function removeAdminCredential(username: string): Promise<void> {
   await saveCredentials(list.filter((c) => c.username.toLowerCase() !== username.toLowerCase()));
 }
 
-export async function listAdminCredentials(): Promise<Omit<AdminCredential, "passwordHash">[]> {
-  return (await listCredentials()).map(({ username, email, role }) => ({ username, email, role }));
+export async function listAdminCredentials(): Promise<Omit<AdminCredential, "passwordHash" | "setupToken">[]> {
+  return (await listCredentials()).map(({ username, email, role, setupTokenExpiresAt }) => ({
+    username,
+    email,
+    role,
+    setupTokenExpiresAt,
+    pendingSetup: setupTokenExpiresAt ? new Date(setupTokenExpiresAt).getTime() > Date.now() : false,
+  }));
 }
 
 // `identifier` puede ser el username o el email indistintamente — pedido
@@ -86,10 +141,11 @@ export async function verifyAdminCredential(identifier: string, password: string
   if (!lower || !password) return null;
   const list = await listCredentials();
   const match = list.find((c) => c.username.toLowerCase() === lower || c.email.toLowerCase() === lower);
-  if (!match) {
-    // Sin credencial encontrada, igual corremos un hash dummy: si solo las
-    // identidades que existen tardan en responder, eso ya filtra qué
-    // usuarios son válidos por temporización.
+  if (!match?.passwordHash) {
+    // Sin credencial encontrada (o cuenta invitada que aún no creó su
+    // contraseña), igual corremos un hash dummy: si solo las identidades
+    // reales tardan en responder, eso ya filtra qué cuentas existen por
+    // temporización.
     await bcrypt.compare(password, "$2a$12$CwTycUXWue0Thq9StjUM0uJ8i6NIxTFvi9mSGYaB6kJXx0a0.Qg4.");
     return null;
   }
@@ -103,5 +159,5 @@ export async function findAdminCredentialByEmail(email: string): Promise<AdminCr
 }
 
 export async function hasAnyAdminCredential(): Promise<boolean> {
-  return (await listCredentials()).length > 0;
+  return (await listCredentials()).some((c) => c.passwordHash);
 }
