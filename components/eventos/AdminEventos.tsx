@@ -49,6 +49,17 @@ interface PausedThread {
   lastUserMessage: string | null;
 }
 
+interface VestiEvent {
+  vestiId: string;
+  venue: Venue;
+  name: string;
+  startsAt: string;
+  eventDate: string;
+  imageUrl: string | null;
+  url: string;
+  lowestPrice: number | null;
+}
+
 interface State {
   reservasWhatsapp: string | null;
   events: MandagroupEvent[];
@@ -57,6 +68,8 @@ interface State {
   instagramScopes: Record<string, InstagramScope>;
   instagramAccounts: Record<string, string>;
   pausedThreads: PausedThread[];
+  vestiEvents: VestiEvent[];
+  hiddenVesti: string[];
 }
 
 const VENUE_LABEL: Record<Venue, string> = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" };
@@ -68,6 +81,12 @@ const IG_ACCOUNT_LABEL: Record<string, string> = {
   "17841462428914603": "@manda.chile (Reñaca)",
   "17841421479976537": "@mandavina.cl (Viña del Mar)",
 };
+
+// Biblioteca de anuncios de Meta: pública, sin login — la forma confiable de
+// ver qué publicidad pagada está corriendo, porque Meta no le muestra los
+// anuncios a quien no calza con la segmentación (típicamente el dueño).
+const AD_LIBRARY = (q: string) =>
+  `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=CL&media_type=all&search_type=keyword_unordered&q=${encodeURIComponent(q)}`;
 
 const UNRESTRICTED: InstagramScope = { enabled: true, venues: ["renaca", "vina"], allowReservations: true };
 
@@ -229,6 +248,80 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
           >
             Agregar
           </button>
+        </div>
+      </section>
+
+      {/* Eventos importados de Vesti: se publican solos (sitio + asistente);
+          acá solo se ocultan los que no deban salir. */}
+      <section className="rounded-2xl border border-foreground/10 p-6">
+        <h2 className="font-heading text-lg font-semibold text-foreground">Eventos desde Vesti</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Todo evento futuro publicado en Vesti para Manda Reñaca o Manda Viña aparece solo en el sitio y lo ofrece el
+          asistente. Se actualiza cada 15 minutos. Oculta los que no quieras mostrar.
+        </p>
+        <div className="mt-4 space-y-3">
+          {state.vestiEvents.length === 0 && (
+            <p className="text-sm text-foreground/50">No hay eventos próximos en Vesti (o Vesti no respondió).</p>
+          )}
+          {state.vestiEvents.map((ev) => {
+            const hidden = state.hiddenVesti.includes(ev.vestiId);
+            return (
+              <div
+                key={ev.vestiId}
+                className={`flex items-center gap-4 rounded-lg border border-foreground/10 px-4 py-3 ${hidden ? "opacity-60" : ""}`}
+              >
+                {ev.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- flyer remoto de Vesti, miniatura del panel
+                  <img src={ev.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-foreground">{ev.name}</p>
+                  <p className="text-xs text-foreground/50">
+                    {VENUE_LABEL[ev.venue]} ·{" "}
+                    {new Date(ev.eventDate + "T12:00:00").toLocaleDateString("es-CL", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </p>
+                  <a href={ev.url} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                    Ver en Vesti
+                  </a>
+                </div>
+                <button
+                  disabled={saving}
+                  onClick={() => patch({ action: "setVestiHidden", vestiId: ev.vestiId, hidden: !hidden })}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                    hidden ? "bg-foreground/10 text-foreground/60" : "bg-primary/15 text-primary"
+                  }`}
+                >
+                  {hidden ? "Oculto" : "Visible"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Publicidad pagada en Meta */}
+      <section className="rounded-2xl border border-foreground/10 p-6">
+        <h2 className="font-heading text-lg font-semibold text-foreground">Anuncios activos en Meta</h2>
+        <p className="mt-1 text-sm text-foreground/60">
+          Meta solo muestra cada anuncio al público al que va dirigido, por eso es normal no verlos en tu propio feed.
+          Aquí ves todos los que están corriendo ahora, tal como los ve la gente.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {["Manda Viña", "Manda Reñaca", "Manda Group"].map((q) => (
+            <a
+              key={q}
+              href={AD_LIBRARY(q)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-foreground/15 px-4 py-2 text-sm font-semibold text-foreground hover:border-primary hover:text-primary"
+            >
+              Ver anuncios de {q}
+            </a>
+          ))}
         </div>
       </section>
 

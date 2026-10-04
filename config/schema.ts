@@ -76,7 +76,7 @@ export const clientConfigSchema = z.object({
     }),
     // "lujo" (Playfair Display + Inter) es el par para belleza/spa/lujo —
     // más carácter editorial que "elegante" (Lora), ver lib/fonts.ts.
-    fontPairing: z.enum(["modern", "elegante", "amigable", "lujo"]),
+    fontPairing: z.enum(["modern", "elegante", "amigable", "lujo", "nocturno"]),
     // true cuando el archivo del logo ya trae el nombre del negocio escrito —
     // el header muestra solo el logo, sin repetir el nombre en texto al lado.
     logoIncludesName: z.boolean().default(false),
@@ -95,6 +95,9 @@ export const clientConfigSchema = z.object({
     // Por eso viene APAGADO por defecto — se enciende cuando el cliente lo
     // aprueba. En las demos va siempre encendido (son nuestras).
     credit: z.boolean().default(false),
+    // Links del header a medida (home bespoke cuyas secciones no son
+    // "Servicios/Nosotros"). Sin esto, el header usa los links por módulo.
+    navLinks: z.array(z.object({ href: z.string(), label: z.string() })).optional(),
   }),
 
   hero: z.object({
@@ -439,6 +442,10 @@ export const clientConfigSchema = z.object({
     // Subtipo de schema.org (Restaurant, HairSalon, LegalService, Store, etc.)
     businessType: z.string().default("LocalBusiness"),
     priceRange: z.string().optional(),
+    // true cuando la home bespoke emite su propio JSON-LD (ej. Manda Group:
+    // Organization + varios locales + eventos). El layout entonces omite el
+    // LocalBusiness genérico para no publicar dos entidades contradictorias.
+    jsonLdInPage: z.boolean().default(false),
   }),
 });
 

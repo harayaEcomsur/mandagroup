@@ -9,7 +9,7 @@ export function Header({ config }: { config: ClientConfig }) {
   const [open, setOpen] = useState(false);
   const { branding, meta, modules } = config;
 
-  const links = [
+  const links = branding.navLinks ?? ([
     modules.propiedades && { href: "/propiedades", label: "Propiedades" },
     modules.agenda && { href: "/agenda", label: "Agendar" },
     modules.tienda && { href: "/tienda", label: "Tienda" },
@@ -17,7 +17,7 @@ export function Header({ config }: { config: ClientConfig }) {
     { href: "/#nosotros", label: "Nosotros" },
     modules.pricing && { href: "/#precios", label: "Precios" },
     { href: "/#contacto", label: "Contacto" },
-  ].filter(Boolean) as { href: string; label: string }[];
+  ].filter(Boolean) as { href: string; label: string }[]);
 
   return (
     <header className="sticky top-0 z-30 border-b border-black/5 bg-background/90 backdrop-blur">

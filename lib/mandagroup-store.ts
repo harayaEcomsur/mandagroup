@@ -1,4 +1,5 @@
 import { db, jsonb, withDb } from "@/lib/db";
+import { listVestiEvents } from "@/lib/vesti";
 
 // Almacén del módulo "eventos" (discotecas/fiestas, requiere modules.eventos):
 // número de WhatsApp al que se derivan las reservas y eventos activos con su
@@ -20,6 +21,12 @@ export interface MandagroupEvent {
   eventDate: string; // "YYYY-MM-DD" — la fecha real del evento, no la de carga
   active: boolean;
   createdAt: string;
+  // Solo en eventos importados de Vesti (ver lib/vesti.ts) — los cargados a
+  // mano en /eventos/admin no los traen.
+  source?: "manual" | "vesti";
+  imageUrl?: string | null;
+  lowestPrice?: number | null;
+  startsAt?: string;
 }
 
 // "YYYY-MM-DD" de hoy en hora de Chile — mismo truco que ya usa
@@ -39,6 +46,7 @@ export interface Derivation {
 
 const RESERVAS_WHATSAPP_KEY = "mandagroup_reservas_whatsapp";
 const INSTAGRAM_SCOPES_KEY = "mandagroup_instagram_scopes";
+const HIDDEN_VESTI_KEY = "mandagroup_hidden_vesti_events";
 
 // Qué puede ofrecer el asistente en una cuenta de Instagram puntual — sin
 // scope guardado para esa cuenta (el caso por defecto), no hay restricción:
@@ -56,13 +64,14 @@ interface Store {
   events: MandagroupEvent[];
   derivations: (Derivation & { createdAt: string })[];
   instagramScopes: Record<string, InstagramScope>;
+  hiddenVesti: string[];
 }
 
 const g = globalThis as unknown as { __mandagroupStore?: Store };
 
 function store(): Store {
   if (!g.__mandagroupStore) {
-    g.__mandagroupStore = { reservasWhatsapp: null, events: [], derivations: [], instagramScopes: {} };
+    g.__mandagroupStore = { reservasWhatsapp: null, events: [], derivations: [], instagramScopes: {}, hiddenVesti: [] };
   }
   return g.__mandagroupStore;
 }
@@ -166,9 +175,65 @@ export async function listEvents(): Promise<MandagroupEvent[]> {
 // evento de ayer deja de aparecer solo, sin depender de que alguien lo
 // desactive a mano. Ya viene ordenado con el más próximo primero (ver
 // listEvents), así "el primero de la lista" siempre es la próxima fiesta.
+//
+// Además de los cargados a mano, suma los próximos eventos publicados en
+// Vesti (salvo los que se ocultaron desde el panel). Si un evento manual ya
+// apunta al mismo link de Vesti, gana el manual (puede traer un título más
+// limpio) y el importado no se duplica.
 export async function listActiveEvents(): Promise<MandagroupEvent[]> {
   const today = todayCL();
-  return (await listEvents()).filter((e) => e.active && e.eventDate >= today);
+  const [manual, vesti, hidden] = await Promise.all([listEvents(), listVestiEvents(), getHiddenVestiIds()]);
+  const active = manual.filter((e) => e.active && e.eventDate >= today).map((e) => ({ ...e, source: "manual" as const }));
+  const manualUrls = new Set(active.map((e) => e.ticketUrl.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")));
+  const imported: MandagroupEvent[] = vesti
+    .filter((v) => v.eventDate >= today && !hidden.includes(v.vestiId))
+    .filter((v) => !manualUrls.has(v.url.replace(/^https?:\/\/(www\.)?/, "")))
+    .map((v) => ({
+      id: `vesti:${v.vestiId}`,
+      venue: v.venue,
+      title: v.name,
+      ticketUrl: v.url,
+      eventDate: v.eventDate,
+      active: true,
+      createdAt: v.startsAt,
+      source: "vesti",
+      imageUrl: v.imageUrl,
+      lowestPrice: v.lowestPrice,
+      startsAt: v.startsAt,
+    }));
+  return [...active, ...imported].sort(
+    (a, b) => a.eventDate.localeCompare(b.eventDate) || (a.startsAt ?? "").localeCompare(b.startsAt ?? "")
+  );
+}
+
+// --- Eventos de Vesti ocultos (el resto se publica solo) ---
+
+export async function getHiddenVestiIds(): Promise<string[]> {
+  return withDb(
+    async () => {
+      const sql = db();
+      const rows = await sql`SELECT value FROM settings WHERE key = ${HIDDEN_VESTI_KEY} LIMIT 1`;
+      return (rows[0]?.value as { ids: string[] } | undefined)?.ids ?? [];
+    },
+    () => store().hiddenVesti
+  );
+}
+
+export async function setVestiHidden(vestiId: string, hidden: boolean): Promise<void> {
+  const current = await getHiddenVestiIds();
+  const next = hidden ? Array.from(new Set([...current, vestiId])) : current.filter((id) => id !== vestiId);
+  await withDb(
+    async () => {
+      const sql = db();
+      await sql`
+        INSERT INTO settings (key, value) VALUES (${HIDDEN_VESTI_KEY}, ${jsonb({ ids: next })})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `;
+    },
+    () => {
+      store().hiddenVesti = next;
+    }
+  );
 }
 
 export async function upsertEvent(data: {

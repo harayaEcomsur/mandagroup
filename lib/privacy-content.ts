@@ -42,7 +42,10 @@ export function buildPrivacySections(): PrivacySection[] {
     ],
   });
 
-  const destinatarios = ["No vendemos ni compartimos tus datos con terceros para fines de marketing."];
+  const destinatarios = ["No vendemos tus datos ni los compartimos con terceros para fines de marketing, salvo lo que se indica a continuación sobre el Pixel de Meta (si aplica)."];
+  if (process.env.NEXT_PUBLIC_META_PIXEL_ID) {
+    destinatarios.push("Solo si lo aceptas en el aviso del sitio, usamos el Pixel de Meta: comparte con Meta (Facebook/Instagram) las páginas que visitas y los clics a la compra de entradas o a WhatsApp, para medir nuestros anuncios y mostrarte nuestros eventos. Si lo rechazas, el Pixel no se carga. Puedes cambiar tu decisión borrando los datos del sitio en tu navegador.");
+  }
   destinatarios.push("Usamos proveedores de infraestructura para operar el sitio (hosting y base de datos en Vercel/Neon, envío de correos en Resend) — actúan como encargados de tratamiento, con las mismas obligaciones de seguridad.");
   if (c.modules.tienda) destinatarios.push("El pago lo procesa directamente Transbank (Webpay) — no almacenamos el número completo de tu tarjeta.");
   if (c.modules.agenda && c.booking?.depositAmount) destinatarios.push("El abono de tu reserva, si aplica, también lo procesa Transbank (Webpay).");

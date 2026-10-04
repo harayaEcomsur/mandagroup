@@ -3,9 +3,13 @@ import { clientConfig } from "@/config/client.config";
 import { getFontVariables } from "@/lib/fonts";
 import { paletteToCssVars } from "@/lib/theme";
 import { buildMetadata, buildLocalBusinessJsonLd } from "@/lib/seo";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
 import "./globals.css";
 
 export const metadata: Metadata = buildMetadata(clientConfig);
+
+// Opcional: sin la variable el sitio no carga nada de Meta (ver MetaPixel).
+const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const fontVariables = getFontVariables(clientConfig.branding.fontPairing);
@@ -23,11 +27,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         {children}
-        <script
-          type="application/ld+json"
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
+        {metaPixelId && <MetaPixel pixelId={metaPixelId} />}
+        {!clientConfig.seo.jsonLdInPage && (
+          <script
+            type="application/ld+json"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
+        )}
       </body>
     </html>
   );

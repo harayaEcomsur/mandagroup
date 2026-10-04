@@ -51,3 +51,38 @@ export function instagramHandle(url: string): string {
     return url;
   }
 }
+
+// --- Feed por cuenta (varias marcas en un mismo sitio) ---
+// Mismo endpoint, pero con el token propio de cada cuenta (Instagram Login:
+// /me/media del dueño del token). Lo usa la home de Manda Group para mostrar
+// el feed de cada marca del grupo; una cuenta sin token configurado devuelve
+// null y la home cae a un link al perfil.
+
+export interface InstagramMedia extends InstagramPost {
+  timestamp: string;
+}
+
+export async function getAccountMedia(token: string | undefined, limit = 6): Promise<InstagramMedia[] | null> {
+  if (!token) return null;
+  try {
+    const url = `https://graph.instagram.com/me/media?fields=${FIELDS},timestamp&limit=${limit}&access_token=${token}`;
+    const res = await fetch(url, { next: { revalidate: 3600 } });
+    if (!res.ok) {
+      console.error("[instagram] getAccountMedia:", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const data: { data?: Array<Record<string, string>> } = await res.json();
+    return (data.data ?? [])
+      .filter((item) => (item.media_type === "VIDEO" ? item.thumbnail_url : item.media_url))
+      .map((item) => ({
+        id: item.id,
+        caption: item.caption,
+        mediaUrl: item.media_type === "VIDEO" ? item.thumbnail_url : item.media_url,
+        permalink: item.permalink,
+        timestamp: item.timestamp,
+      }));
+  } catch (error) {
+    console.error("[instagram] getAccountMedia:", error);
+    return null;
+  }
+}

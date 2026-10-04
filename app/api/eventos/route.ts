@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { clientConfig } from "@/config/client.config";
 import { currentAdminUser } from "@/lib/auth";
 import {
@@ -10,7 +11,10 @@ import {
   derivationStats,
   getInstagramScopes,
   setInstagramScope,
+  getHiddenVestiIds,
+  setVestiHidden,
 } from "@/lib/mandagroup-store";
+import { listVestiEvents } from "@/lib/vesti";
 import { recentChats } from "@/lib/chat-log";
 import { listPausedThreads, resumeThread } from "@/lib/ig-history";
 
@@ -29,7 +33,7 @@ export async function GET(req: Request) {
   const user = await currentAdminUser(claveFromRequest(req));
   if (!user) return Response.json({ error: "No autorizado" }, { status: 401 });
 
-  const [reservasWhatsapp, events, stats, chats, instagramScopes, pausedThreads] = await Promise.all([
+  const [reservasWhatsapp, events, stats, chats, instagramScopes, pausedThreads, vestiEvents, hiddenVesti] = await Promise.all([
     getReservationNumber(),
     listEvents(),
     derivationStats(30),
@@ -39,6 +43,8 @@ export async function GET(req: Request) {
     recentChats(24 * 7).then((list) => list.slice(-100).reverse()),
     getInstagramScopes(),
     listPausedThreads(),
+    listVestiEvents(),
+    getHiddenVestiIds(),
   ]);
   return Response.json({
     reservasWhatsapp,
@@ -50,6 +56,10 @@ export async function GET(req: Request) {
     // necesita saber cuáles existen para poder ofrecer un scope por cada una.
     instagramAccounts: clientConfig.instagramAccounts ?? {},
     pausedThreads,
+    // Próximos eventos publicados en Vesti — salen solos en el sitio y en el
+    // asistente salvo los que estén en hiddenVesti.
+    vestiEvents,
+    hiddenVesti,
   });
 }
 
@@ -72,6 +82,7 @@ const patchSchema = z.discriminatedUnion("action", [
     allowReservations: z.boolean(),
   }),
   z.object({ action: z.literal("resumeInstagramThread"), senderId: z.string().min(1) }),
+  z.object({ action: z.literal("setVestiHidden"), vestiId: z.string().min(1), hidden: z.boolean() }),
 ]);
 
 export async function PATCH(req: Request) {
@@ -95,8 +106,13 @@ export async function PATCH(req: Request) {
       venues: parsed.data.venues,
       allowReservations: parsed.data.allowReservations,
     });
+  } else if (parsed.data.action === "setVestiHidden") {
+    await setVestiHidden(parsed.data.vestiId, parsed.data.hidden);
   } else {
     await resumeThread(parsed.data.senderId);
   }
+  // La home muestra la cartelera: que un evento agregado/ocultado se vea ya,
+  // sin esperar la regeneración de 5 min.
+  if (["upsertEvent", "setEventActive", "setVestiHidden"].includes(parsed.data.action)) revalidatePath("/");
   return Response.json({ ok: true });
 }

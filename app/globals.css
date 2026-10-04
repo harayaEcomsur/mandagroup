@@ -44,3 +44,36 @@ h6 {
 summary::-webkit-details-marker {
   display: none;
 }
+
+/* Reveal (components/mandagroup/Reveal.tsx): estado inicial solo cuando hay
+   JS y el usuario no pidió menos movimiento — sin eso el contenido se ve
+   siempre, nunca queda oculto. */
+@media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+  .reveal {
+    transition:
+      opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal[data-shown="false"] {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Riel horizontal de la cartelera: scroll nativo con snap, sin barra visible. */
+.rail {
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}

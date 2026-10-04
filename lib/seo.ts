@@ -12,6 +12,9 @@ export function buildMetadata(config: ClientConfig): Metadata {
     title: config.seo.title,
     description: config.seo.description,
     keywords: config.seo.keywords,
+    // Canonical explícito a la home: sin esto, mandagroup.vercel.app y el
+    // dominio final quedan como duplicados sin una URL preferida declarada.
+    alternates: { canonical: "/" },
     // SITE_NOINDEX se define solo en el proyecto Vercel de la demo (datos ficticios):
     // evita indexar un negocio falso con schema LocalBusiness. Los proyectos de
     // clientes reales no llevan esta env var y se indexan normalmente.

@@ -18,21 +18,29 @@ export const clientConfig = defineClientConfig({
     logoUrl: "/clients/mandagroup/logo-renaca.png",
     faviconUrl: "/clients/mandagroup/logo-renaca.png",
     palette: {
-      // Dorado del logo de Manda Reñaca (cuenta insignia) + rosa del anillo
-      // neón de Manda Viña, sobre fondo oscuro — un sistema que une a ambos
-      // locales sin perder la identidad de ninguno.
+      // Un solo acento: el dorado del logo de Manda Reñaca (cuenta insignia).
+      // El rosa neón de Manda Viña queda en su propio logo, no en la UI — el
+      // sitio es del holding (clubes + restaurantes) y se lee corporativo con
+      // un único color de marca. "accent" es una variante más clara del mismo
+      // dorado para detalles, no un segundo color.
       primary: "#E0A83E",
-      accent: "#F2356B",
-      background: "#0A0A0C",
-      foreground: "#F5F1E8",
+      accent: "#EBC57E",
+      background: "#0B0B0D",
+      foreground: "#F2EFE9",
     },
-    // "lujo" (Playfair Display + Inter): recomendado por ui-ux-pro-max para un
-    // holding gastronómico/nocturno premium — "modern" (Poppins) se sentía
-    // genérico tipo SaaS para una marca de restaurantes y fiestas.
-    fontPairing: "lujo",
+    // "nocturno" (Bricolage Grotesque + Hanken Grotesk): rediseño corporativo
+    // nocturno del holding — sans de display moderna en vez de la serif
+    // Playfair, que se leía más "restaurante elegante" que grupo de clubes.
+    fontPairing: "nocturno",
     logoIncludesName: true,
     layout: "clasico",
     credit: true,
+    navLinks: [
+      { href: "/#eventos", label: "Cartelera" },
+      { href: "/#marcas", label: "Marcas" },
+      { href: "/#instagram", label: "Instagram" },
+      { href: "/#contacto", label: "Contacto" },
+    ],
   },
 
   // Home bespoke (MandagroupHome.tsx): estos campos igual alimentan el
@@ -109,9 +117,25 @@ export const clientConfig = defineClientConfig({
   ],
 
   seo: {
-    title: "Manda Group — Manda Reñaca & Manda Viña del Mar",
-    description: "Reserva tu mesa o compra tu entrada a Costa Nights en Manda Reñaca y Manda Viña del Mar, directo por WhatsApp.",
+    // ~60 caracteres: marca + qué es + dónde. "Región de Valparaíso" cubre
+    // los clubes (Reñaca, Viña) y Costa Sushi (Valparaíso, Curauma).
+    title: "Manda Group | Clubes y restaurantes en la Región de Valparaíso",
+    description:
+      "Manda Reñaca y Manda Viña del Mar, fiestas Costa Nights, Costa Sushi en Valparaíso y Curauma, y Carbon. Entradas en Vesti y reservas por WhatsApp.",
+    ogImageUrl: "/clients/mandagroup/og-manda.jpg",
     businessType: "NightClub",
-    keywords: ["manda reñaca", "manda viña del mar", "costa nights", "discoteca reñaca", "fiestas viña del mar"],
+    keywords: [
+      "manda reñaca",
+      "manda viña del mar",
+      "manda group",
+      "costa nights",
+      "discoteca reñaca",
+      "fiestas viña del mar",
+      "costa sushi",
+      "costa sushi valparaíso",
+      "costa sushi curauma",
+      "carbon parrilla",
+    ],
+    jsonLdInPage: true,
   },
 });
