@@ -7,8 +7,11 @@ export function Footer({ config }: { config: ClientConfig }) {
   const mostrarCredito = branding.credit || Boolean(process.env.SITE_NOINDEX);
 
   return (
-    <footer className="border-t border-black/5 py-10 text-sm text-foreground/60">
-      <Container className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    // pb-28 en móvil y pr-24 desde sm: dejan libre la esquina inferior
+    // derecha, donde flotan los botones de WhatsApp y del chat — sin esto
+    // tapaban justo lo último del footer (el crédito).
+    <footer className="border-t border-foreground/10 pb-28 pt-10 text-sm text-foreground/60 sm:pb-10">
+      <Container className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:pr-24 lg:pr-24">
         <p>
           © {new Date().getFullYear()} {meta.businessName}. Todos los derechos reservados.
         </p>
@@ -27,7 +30,7 @@ export function Footer({ config }: { config: ClientConfig }) {
               href="https://haraya.dev/como-lo-hicimos"
               target="_blank"
               rel="noopener"
-              className="opacity-70 transition-opacity hover:opacity-100 hover:text-primary"
+              className="font-medium text-foreground/70 transition-colors hover:text-primary"
             >
               Sitio por HarayaDev
             </a>
