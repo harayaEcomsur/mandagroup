@@ -1,142 +1,210 @@
-import { get } from "node:https";
+import { request } from "node:https";
 import { unstable_cache } from "next/cache";
-import type { Venue } from "@/lib/mandagroup-store";
+import type { EventVenue } from "@/lib/mandagroup-store";
 
 // Eventos de Vesti (la boletería de Manda): toda la venta de entradas pasa
-// por ahí, así que la cartelera "real" vive en la página pública de cada
-// local en vesti.cl. Vesti no tiene API pública, pero esa página es Next.js
-// y trae embebido el listado de próximos eventos (nombre, fecha, flyer, slug,
-// precio desde) en el payload RSC — se lee de ahí, cacheado 15 min, para que
-// un evento nuevo cargado en Vesti aparezca solo en el sitio y en el
-// asistente sin que nadie lo tenga que volver a cargar en /eventos/admin.
+// por ahí, así que la cartelera "real" vive en Vesti. Se lee de la misma API
+// GraphQL pública que usa vesti.cl en el navegador (api.vesti.cl/graphql):
+// - vendorPublicProfile: los próximos eventos de cada cuenta
+// - event: el detalle de cada uno — dirección real con coordenadas, recinto,
+//   hora de término, tipos de entrada con precio y si están agotados,
+//   cancelado/reprogramado
+// Cacheado 15 min, para que un evento nuevo cargado en Vesti aparezca solo en
+// el sitio y en el asistente sin que nadie lo vuelva a cargar en el panel.
 //
-// Si Vesti cambia su markup esto devuelve [] (nunca rompe la página): el
-// sitio sigue mostrando los eventos cargados a mano.
+// No es una API documentada: si Vesti la cambia, esto devuelve [] (nunca
+// rompe la página) y el sitio sigue mostrando los eventos cargados a mano.
 
-const VESTI_COMPANIES: Record<Venue, string> = {
+// Las 3 cuentas de Manda en Vesti: los 2 locales y Costa Eventos (la
+// productora de las fiestas Costa Nights, en recintos externos).
+const VESTI_COMPANIES: Record<EventVenue, string> = {
   renaca: "manda-renaca",
   vina: "manda-group-vina",
+  costa: "costa-eventos",
 };
+
+export interface VestiTicket {
+  name: string;
+  price: number; // CLP; 0 = cortesía
+  soldOut: boolean;
+}
 
 export interface VestiEvent {
   vestiId: string;
-  venue: Venue;
+  venue: EventVenue;
   name: string;
   startsAt: string; // ISO UTC, tal cual lo entrega Vesti
+  endsAt: string | null;
   eventDate: string; // "YYYY-MM-DD" en hora de Chile (la noche del evento)
   imageUrl: string | null;
   url: string;
-  lowestPrice: number | null; // CLP; null/0 = gratis o sin precio publicado
+  // Precio más bajo de una entrada pagada y disponible (las cortesías de $0
+  // no cuentan: "desde $0" no dice nada). null = sin precio pagado publicado.
+  lowestPrice: number | null;
+  tickets: VestiTicket[];
+  soldOut: boolean; // todas las entradas agotadas
+  rescheduled: boolean;
+  place: string | null; // recinto ("Club Naval"); null si es el propio local
+  address: string | null; // dirección completa, salvo que el evento la oculte
+  comuna: string | null;
+  geo: { lat: number; lng: number } | null;
 }
 
-interface RawVestiEvent {
-  id?: string;
-  name?: string;
-  dateIni?: string;
+interface RawProfileEvent {
+  id: string;
+  name: string;
+  dateIni: string;
   images?: string[];
-  slug?: string;
-  lowestPrice?: number;
+  slug: string;
   isClosed?: boolean;
+}
+
+interface RawEventDetail {
+  place: string | null;
+  comuna: string | null;
+  address: { address: string | null; lat: number | null; lng: number | null } | null;
+  hideAddress: boolean | null;
+  dateEnd: string | null;
+  isCanceled: boolean | null;
+  isRescheduled: boolean | null;
+  tickets: { name: string; price: number; isSoldOut: boolean }[] | null;
+}
+
+const PROFILE_QUERY = `query($i: GetVendorPublicProfileInput!) {
+  vendorPublicProfile(getVendorPublicProfileInput: $i) {
+    events { id name dateIni images slug isClosed }
+  }
+}`;
+
+const EVENT_QUERY = `query($i: GetEventInput!) {
+  event(getEventInput: $i) {
+    place comuna hideAddress dateEnd isCanceled isRescheduled
+    address { address lat lng }
+    tickets { name price isSoldOut }
+  }
+}`;
+
+// POST con node:https y no con fetch: un fetch sin caché dentro de la home
+// la marca como dinámica en pleno build (Next lo lanza como error y la home
+// quedaba prerenderizada sin cartelera). Lo que se cachea es el listado ya
+// armado (unstable_cache en listVestiEvents).
+function gql<T>(query: string, variables: Record<string, unknown>): Promise<T | null> {
+  const body = JSON.stringify({ query, variables });
+  return new Promise((resolve) => {
+    const req = request(
+      "https://api.vesti.cl/graphql",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          "User-Agent": "Mozilla/5.0 (compatible; MandaGroupSite/1.0)",
+        },
+        timeout: 10_000,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(c));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { data?: T; errors?: unknown };
+            resolve(res.statusCode === 200 && json.data && !json.errors ? json.data : null);
+          } catch {
+            resolve(null);
+          }
+        });
+        res.on("error", () => resolve(null));
+      }
+    );
+    req.on("timeout", () => req.destroy());
+    req.on("error", () => resolve(null));
+    req.end(body);
+  });
+}
+
+// Respaldo cuando Vesti no trae el recinto como dato (pasa seguido en Costa
+// Eventos): viene como último tramo del nombre ("HALLOWEEN … / 31.10 / CLUB
+// NAVAL"). Se toma ese tramo si no es una fecha.
+function placeFromName(name: string): string | null {
+  const parts = name.split(" / ").map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+  const last = parts[parts.length - 1];
+  if (/^\d{1,2}[./]\d{1,2}$/.test(last)) return null;
+  return titleCase(last);
+}
+
+// "CLUB NAVAL" → "Club Naval" (los nombres vienen en mayúsculas sostenidas)
+function titleCase(s: string): string {
+  return s === s.toUpperCase() ? s.toLowerCase().replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase()) : s;
+}
+
+function cleanName(name: string): string {
+  return name
+    .replace(/\*+/g, " ")
+    .replace(/\s*\/\/\s*/g, " / ")
+    .replace(/[\s/]+$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function chileDate(iso: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date(iso));
 }
 
-// El payload viene como string JS escapado dentro de <script>self.__next_f…>;
-// se des-escapan las comillas y se busca el arreglo "events" (los próximos —
-// "pastEvents" es otro arreglo aparte que se ignora a propósito).
-function extractEvents(html: string): RawVestiEvent[] {
-  const text = html.replace(/\\"/g, '"');
-  const start = text.indexOf('"events":[{"__typename":"Event"');
-  if (start === -1) return [];
-  const arrayStart = text.indexOf("[", start);
-  let depth = 0;
-  for (let i = arrayStart; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === "[" || ch === "{") depth++;
-    else if (ch === "]" || ch === "}") depth--;
-    if (depth === 0) {
-      try {
-        return JSON.parse(text.slice(arrayStart, i + 1)) as RawVestiEvent[];
-      } catch {
-        return [];
-      }
-    }
-  }
-  return [];
-}
+async function fetchVenueEvents(venue: EventVenue): Promise<VestiEvent[] | null> {
+  const profile = await gql<{ vendorPublicProfile: { events: RawProfileEvent[] } | null }>(PROFILE_QUERY, {
+    i: { slug: VESTI_COMPANIES[venue] },
+  });
+  if (!profile?.vendorPublicProfile) return null;
 
-// Lectura directa con node:https y no con fetch: la página pesa ~3 MB (sobre
-// el límite de 2 MB del data cache de Next) y un fetch "no-store" marca la
-// página como dinámica en pleno build — Next lo lanza como error, el catch
-// lo tragaba y la home quedaba prerenderizada SIN cartelera. Lo que se cachea
-// es el listado ya parseado (unstable_cache en listVestiEvents).
-function fetchText(url: string, redirects = 3): Promise<string | null> {
-  return new Promise((resolve) => {
-    const req = get(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; MandaGroupSite/1.0)" }, timeout: 10_000 }, (res) => {
-      // Vesti redirige www.vesti.cl → vesti.cl (308); node:https no sigue
-      // redirecciones solo.
-      const location = res.headers.location;
-      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && location && redirects > 0) {
-        res.resume();
-        resolve(fetchText(new URL(location, url).toString(), redirects - 1));
-        return;
-      }
-      if (res.statusCode !== 200) {
-        res.resume();
-        resolve(null);
-        return;
-      }
-      const chunks: Buffer[] = [];
-      res.on("data", (c: Buffer) => chunks.push(c));
-      res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-      res.on("error", () => resolve(null));
-    });
-    req.on("timeout", () => req.destroy());
-    req.on("error", () => resolve(null));
+  const upcoming = profile.vendorPublicProfile.events.filter((e) => e.id && e.name && e.dateIni && e.slug && !e.isClosed);
+  const details = await Promise.all(
+    upcoming.map((e) => gql<{ event: RawEventDetail | null }>(EVENT_QUERY, { i: { slug: e.slug } }))
+  );
+
+  return upcoming.flatMap((e, idx) => {
+    const d = details[idx]?.event ?? null;
+    if (d?.isCanceled) return [];
+    const name = cleanName(e.name);
+    const tickets = (d?.tickets ?? []).map((t) => ({ name: t.name, price: t.price, soldOut: t.isSoldOut }));
+    const paid = tickets.filter((t) => t.price > 0 && !t.soldOut).map((t) => t.price);
+    const showAddress = d && !d.hideAddress && d.address?.address;
+    return [
+      {
+        vestiId: e.id,
+        venue,
+        name,
+        startsAt: e.dateIni,
+        endsAt: d?.dateEnd ?? null,
+        eventDate: chileDate(e.dateIni),
+        imageUrl: e.images?.[0] ?? null,
+        url: `https://www.vesti.cl/events/${e.slug}`,
+        lowestPrice: paid.length ? Math.min(...paid) : null,
+        tickets,
+        soldOut: tickets.length > 0 && tickets.every((t) => t.soldOut),
+        rescheduled: Boolean(d?.isRescheduled),
+        place: d?.place ? titleCase(d.place) : venue === "costa" ? placeFromName(name) : null,
+        address: showAddress ? d.address!.address : null,
+        comuna: d?.comuna ?? null,
+        geo:
+          showAddress && d.address!.lat != null && d.address!.lng != null
+            ? { lat: d.address!.lat, lng: d.address!.lng }
+            : null,
+      },
+    ];
   });
 }
 
-async function fetchVenueEvents(venue: Venue): Promise<VestiEvent[] | null> {
-  const company = VESTI_COMPANIES[venue];
-  try {
-    const html = await fetchText(`https://vesti.cl/company/${company}`);
-    if (!html) return null;
-    const raw = extractEvents(html);
-    return raw
-      .filter((e) => e.id && e.name && e.dateIni && e.slug && !e.isClosed)
-      .map((e) => ({
-        vestiId: e.id!,
-        venue,
-        name: e.name!
-          .replace(/\*+/g, " ")
-          .replace(/\s*\/\/\s*/g, " / ")
-          .replace(/[\s/]+$/, "")
-          .replace(/\s{2,}/g, " ")
-          .trim(),
-        startsAt: e.dateIni!,
-        eventDate: chileDate(e.dateIni!),
-        imageUrl: e.images?.[0] ?? null,
-        url: `https://www.vesti.cl/events/${e.slug}`,
-        lowestPrice: e.lowestPrice ? e.lowestPrice : null,
-      }));
-  } catch (error) {
-    console.error(`[vesti] ${company}:`, error);
-    return null;
-  }
-}
-
-// Próximos eventos de ambos locales, ordenados por fecha. Si Vesti no
+// Próximos eventos de las 3 cuentas, ordenados por fecha. Si Vesti no
 // responde, la función cacheada lanza (así un fallo momentáneo NO queda
 // guardado 15 min como "no hay eventos") y el wrapper devuelve [].
 const cachedVestiEvents = unstable_cache(
   async (): Promise<VestiEvent[]> => {
-    const all = await Promise.all((Object.keys(VESTI_COMPANIES) as Venue[]).map(fetchVenueEvents));
+    const all = await Promise.all((Object.keys(VESTI_COMPANIES) as EventVenue[]).map(fetchVenueEvents));
     if (all.some((list) => list === null)) throw new Error("Vesti no respondió");
     return (all as VestiEvent[][]).flat().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   },
-  ["vesti-events-v2"],
+  ["vesti-events-v4"],
   { revalidate: 900 }
 );
 
@@ -149,6 +217,6 @@ export async function listVestiEvents(): Promise<VestiEvent[]> {
   }
 }
 
-export function vestiCompanyUrl(venue: Venue): string {
+export function vestiCompanyUrl(venue: EventVenue): string {
   return `https://www.vesti.cl/company/${VESTI_COMPANIES[venue]}`;
 }

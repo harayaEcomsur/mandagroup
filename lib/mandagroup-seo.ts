@@ -1,6 +1,6 @@
 import { clientConfig } from "@/config/client.config";
 import type { MandagroupEvent } from "@/lib/mandagroup-store";
-import { BRANDS, SITE_FAQ, VENUE_LOCALITY } from "@/lib/mandagroup-brands";
+import { BRANDS, SITE_FAQ, VENUE_LOCALITY, eventVenueLabel } from "@/lib/mandagroup-brands";
 
 // JSON-LD de la home de Manda Group, en un solo @graph:
 // - Organization (el holding) con sus marcas y cuentas oficiales (sameAs)
@@ -52,33 +52,54 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
   });
 
   const eventNodes = events.map((e) => {
-    const venue = BRANDS.find((b) => b.key === e.venue)!;
+    const venue = e.venue === "costa" ? null : BRANDS.find((b) => b.key === e.venue)!;
+    const where = eventVenueLabel(e);
+    // Dirección: la real que publica Vesti para el evento (con coordenadas);
+    // si no viene, la del local; las de Costa Nights sin dato quedan a nivel
+    // de región.
+    const streetAddress = e.address?.split(",")[0] ?? venue?.address?.split(",")[0];
+    const locality = e.comuna ?? (venue ? VENUE_LOCALITY[venue.key as "renaca" | "vina"] : undefined);
+    const availability = (soldOut?: boolean) =>
+      soldOut ? "https://schema.org/SoldOut" : "https://schema.org/InStock";
     return {
       "@type": "Event",
       name: e.title,
       startDate: e.startsAt ?? e.eventDate,
-      eventStatus: "https://schema.org/EventScheduled",
+      ...(e.endsAt ? { endDate: e.endsAt } : {}),
+      eventStatus: e.rescheduled ? "https://schema.org/EventRescheduled" : "https://schema.org/EventScheduled",
       eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
       image: e.imageUrl ? [e.imageUrl] : [`${base}/clients/mandagroup/og-manda.jpg`],
-      description: `${e.title} en ${venue.name}. Entradas a la venta en Vesti.`,
+      description: `${e.title} en ${where}. Entradas a la venta en Vesti.`,
       location: {
         "@type": "Place",
-        name: venue.name,
+        name: e.place ?? (venue ? venue.name : "Costa Nights"),
         address: {
           "@type": "PostalAddress",
-          streetAddress: venue.address?.split(",")[0],
-          addressLocality: VENUE_LOCALITY[e.venue],
+          ...(streetAddress ? { streetAddress } : {}),
+          ...(locality ? { addressLocality: locality } : {}),
           addressRegion: "Valparaíso",
           addressCountry: "CL",
         },
+        ...(e.geo ? { geo: { "@type": "GeoCoordinates", latitude: e.geo.lat, longitude: e.geo.lng } } : {}),
       },
-      organizer: { "@type": "Organization", name: venue.name, url: base },
-      offers: {
-        "@type": "Offer",
-        url: e.ticketUrl,
-        availability: "https://schema.org/InStock",
-        ...(e.lowestPrice ? { price: e.lowestPrice, priceCurrency: "CLP" } : {}),
-      },
+      organizer: { "@type": "Organization", name: venue ? venue.name : "Costa Nights", url: base },
+      // Un Offer por tipo de entrada (cortesía, early bird, general…) con su
+      // precio y si está agotada, tal como los publica Vesti.
+      offers: e.tickets?.length
+        ? e.tickets.map((t) => ({
+            "@type": "Offer",
+            name: t.name,
+            url: e.ticketUrl,
+            price: t.price,
+            priceCurrency: "CLP",
+            availability: availability(t.soldOut),
+          }))
+        : {
+            "@type": "Offer",
+            url: e.ticketUrl,
+            availability: availability(e.soldOut),
+            ...(e.lowestPrice ? { price: e.lowestPrice, priceCurrency: "CLP" } : {}),
+          },
     };
   });
 

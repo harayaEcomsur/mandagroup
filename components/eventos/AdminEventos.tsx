@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 
 type Venue = "renaca" | "vina";
+// Eventos importados también pueden ser de Costa Nights (Costa Eventos).
+type EventVenue = Venue | "costa";
 
 interface MandagroupEvent {
   id: string;
@@ -17,12 +19,12 @@ interface MandagroupEvent {
 interface DerivationStats {
   total: number;
   porTipo: { reserva: number; invitacion: number };
-  porVenue: Partial<Record<Venue, number>>;
+  porVenue: Partial<Record<EventVenue, number>>;
   porCanal: { web: number; whatsapp: number; instagram: number };
   recientes: {
     canal: string;
     tipo: string;
-    venue?: Venue;
+    venue?: EventVenue;
     eventId?: string;
     eventTitle?: string;
     userMessage?: string;
@@ -51,7 +53,8 @@ interface PausedThread {
 
 interface VestiEvent {
   vestiId: string;
-  venue: Venue;
+  venue: EventVenue;
+  place: string | null;
   name: string;
   startsAt: string;
   eventDate: string;
@@ -72,7 +75,11 @@ interface State {
   hiddenVesti: string[];
 }
 
-const VENUE_LABEL: Record<Venue, string> = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" };
+const VENUE_LABEL: Record<EventVenue, string> = {
+  renaca: "Manda Reñaca",
+  vina: "Manda Viña del Mar",
+  costa: "Costa Nights",
+};
 
 // Cuentas reales de Instagram de este cliente (mismos IDs que
 // config/client.config.ts → instagramAccounts) — solo para mostrar un nombre
@@ -256,8 +263,8 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
       <section className="rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Eventos desde Vesti</h2>
         <p className="mt-1 text-sm text-foreground/60">
-          Todo evento futuro publicado en Vesti para Manda Reñaca o Manda Viña aparece solo en el sitio y lo ofrece el
-          asistente. Se actualiza cada 15 minutos. Oculta los que no quieras mostrar.
+          Todo evento futuro publicado en Vesti por Manda Reñaca, Manda Viña o Costa Eventos (Costa Nights) aparece
+          solo en el sitio y lo ofrece el asistente. Se actualiza cada 15 minutos. Oculta los que no quieras mostrar.
         </p>
         <div className="mt-4 space-y-3">
           {state.vestiEvents.length === 0 && (
@@ -277,7 +284,8 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-foreground">{ev.name}</p>
                   <p className="text-xs text-foreground/50">
-                    {VENUE_LABEL[ev.venue]} ·{" "}
+                    {VENUE_LABEL[ev.venue]}
+                    {ev.place ? ` · ${ev.place}` : ""} ·{" "}
                     {new Date(ev.eventDate + "T12:00:00").toLocaleDateString("es-CL", {
                       weekday: "long",
                       day: "numeric",

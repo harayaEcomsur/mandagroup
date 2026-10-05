@@ -13,7 +13,7 @@ export const BRANDS = [
     kind: "Classic Social Lounge",
     address: "Av. Borgoño 14.880, Reñaca",
     maps: "https://www.google.com/maps/search/?api=1&query=Manda+Re%C3%B1aca+Av.+Borgo%C3%B1o+14880",
-    logo: "/clients/mandagroup/logo-renaca.png",
+    logo: "/clients/mandagroup/logo-renaca.webp",
     handle: "manda.chile",
     tokenEnv: "INSTAGRAM_TOKEN_MANDACHILE",
     fallbackImage: "/clients/mandagroup/hero-cocktails.jpg",
@@ -24,7 +24,7 @@ export const BRANDS = [
     kind: "Fiesta, restaurant y música",
     address: "5 Norte 132, Viña del Mar",
     maps: "https://www.google.com/maps/search/?api=1&query=Manda+Vi%C3%B1a+del+Mar+5+Norte+132",
-    logo: "/clients/mandagroup/logo-vina.png",
+    logo: "/clients/mandagroup/logo-vina.webp",
     handle: "mandavina.cl",
     tokenEnv: "INSTAGRAM_TOKEN_MANDAVINA",
     fallbackImage: null,
@@ -35,7 +35,7 @@ export const BRANDS = [
     kind: "Sushi bar y delivery en Valparaíso y Curauma",
     address: null,
     maps: null,
-    logo: "/clients/mandagroup/logo-costa-sushi.png",
+    logo: "/clients/mandagroup/logo-costa-sushi.webp",
     handle: "costasushicl_",
     tokenEnv: "INSTAGRAM_TOKEN_COSTASUSHI",
     fallbackImage: "/clients/mandagroup/costa-sushi.jpg",
@@ -46,7 +46,7 @@ export const BRANDS = [
     kind: "Carnes y parrilla",
     address: null,
     maps: null,
-    logo: "/clients/mandagroup/logo-carbon.png",
+    logo: "/clients/mandagroup/logo-carbon.webp",
     handle: "carbon.chile",
     tokenEnv: "INSTAGRAM_TOKEN_CARBON",
     fallbackImage: null,
@@ -60,6 +60,18 @@ export const VENUE_LOCALITY: Record<"renaca" | "vina", string> = {
   renaca: "Reñaca, Viña del Mar",
   vina: "Viña del Mar",
 };
+
+// Dónde ocurre un evento, como se le muestra a la gente: el local, o
+// "Costa Nights · <recinto>" para las fiestas de Costa Eventos.
+export const EVENT_VENUE_LABEL = {
+  renaca: "Manda Reñaca",
+  vina: "Manda Viña del Mar",
+  costa: "Costa Nights",
+} as const;
+
+export function eventVenueLabel(e: { venue: keyof typeof EVENT_VENUE_LABEL; place?: string | null }): string {
+  return e.venue === "costa" && e.place ? `Costa Nights · ${e.place}` : EVENT_VENUE_LABEL[e.venue];
+}
 
 export const SITE_FAQ = [
   {

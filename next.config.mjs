@@ -21,6 +21,12 @@ const nextConfig = {
   },
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
+    // Solo WebP (el default), no AVIF: AVIF pesa algo menos pero tarda
+    // bastante más en generarse la primera vez, y acá entran imágenes nuevas
+    // seguido (flyers de Vesti, fotos de Instagram) — esa primera espera es
+    // justo el "tarda en aparecer". 1 día de caché del optimizador: una vez
+    // publicados, esos archivos no cambian.
+    minimumCacheTTL: 86400,
   },
 };
 

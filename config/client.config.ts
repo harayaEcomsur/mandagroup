@@ -15,7 +15,7 @@ export const clientConfig = defineClientConfig({
   },
 
   branding: {
-    logoUrl: "/clients/mandagroup/logo-renaca.png",
+    logoUrl: "/clients/mandagroup/logo-renaca.webp",
     faviconUrl: "/clients/mandagroup/logo-renaca.png",
     palette: {
       // Un solo acento: el dorado del logo de Manda Reñaca (cuenta insignia).

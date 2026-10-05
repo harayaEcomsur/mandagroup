@@ -7,15 +7,12 @@ import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
 import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
 import { vestiCompanyUrl } from "@/lib/vesti";
-import { BRANDS, SITE_FAQ, type Brand } from "@/lib/mandagroup-brands";
+import { BRANDS, SITE_FAQ, eventVenueLabel, type Brand } from "@/lib/mandagroup-brands";
 import { buildMandagroupJsonLd } from "@/lib/mandagroup-seo";
 
 
 
-const VENUE_LABEL: Record<MandagroupEvent["venue"], string> = {
-  renaca: "Manda Reñaca",
-  vina: "Manda Viña del Mar",
-};
+
 
 const TZ = "America/Santiago";
 
@@ -87,12 +84,15 @@ export async function MandagroupHome() {
           fill
           priority
           sizes="100vw"
+          // Va bajo un degradado oscuro casi opaco a la izquierda: calidad 55
+          // no se nota y baja bastante el peso del LCP.
+          quality={55}
           className="-z-10 object-cover"
         />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-background via-background/85 to-background/30" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-background to-transparent" />
         <Container className="grid min-h-[78dvh] items-center gap-12 py-20 lg:grid-cols-12 lg:py-24">
-          <Reveal className="lg:col-span-8">
+          <Reveal mode="load" className="lg:col-span-8">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Manda Group</p>
             <h1 className="mt-5 max-w-[26ch] text-balance font-heading text-5xl font-semibold leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-[3.6rem]">
               Comer, brindar y bailar en la costa de Valparaíso.
@@ -123,7 +123,7 @@ export async function MandagroupHome() {
           </Reveal>
 
           {nextWithFlyer?.imageUrl && (
-            <Reveal delay={150} className="w-full max-w-sm lg:col-span-4 lg:col-start-9 lg:max-w-none lg:pl-4">
+            <Reveal mode="load" delay={150} className="w-full max-w-sm lg:col-span-4 lg:col-start-9 lg:max-w-none lg:pl-4">
               <a
                 href={nextWithFlyer.ticketUrl}
                 data-pixel-event={nextWithFlyer.title}
@@ -136,13 +136,17 @@ export async function MandagroupHome() {
                     src={nextWithFlyer.imageUrl}
                     alt={`Flyer de ${nextWithFlyer.title}`}
                     fill
+                    // Sin lazy (en escritorio está a la vista de entrada), pero
+                    // sin prioridad alta: en celular queda bajo el pliegue y no
+                    // debe competir con la foto del hero (el LCP).
+                    loading="eager"
                     sizes="(min-width: 1024px) 30vw, 90vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                   />
                 </div>
                 <div className="flex items-center justify-between gap-4 px-3 pb-2 pt-4">
                   <div className="min-w-0">
-                    <p className="text-xs text-foreground/60">Próxima fecha · {VENUE_LABEL[nextWithFlyer.venue]}</p>
+                    <p className="text-xs text-foreground/60">Próxima fecha · {eventVenueLabel(nextWithFlyer)}</p>
                     <p className="mt-1 truncate font-heading text-base font-semibold text-foreground first-letter:uppercase">
                       {dateParts(nextWithFlyer).long}
                     </p>
@@ -169,7 +173,7 @@ export async function MandagroupHome() {
                 Próximas fiestas
               </h2>
               <p className="mt-3 max-w-[52ch] text-foreground/60">
-                Todas las fechas a la venta en Manda Reñaca y Manda Viña del Mar. Las entradas se compran en Vesti.
+                Manda Reñaca, Manda Viña del Mar y las fiestas Costa Nights. Las entradas se compran en Vesti.
               </p>
             </div>
             <div className="flex gap-5 text-sm font-semibold">
@@ -178,6 +182,9 @@ export async function MandagroupHome() {
               </a>
               <a href={vestiCompanyUrl("vina")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
                 Vesti Viña
+              </a>
+              <a href={vestiCompanyUrl("costa")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
+                Vesti Costa Nights
               </a>
             </div>
           </Reveal>
@@ -193,15 +200,16 @@ export async function MandagroupHome() {
             </div>
           </Container>
         ) : (
-          <div className="rail mt-12 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 sm:scroll-px-6 sm:px-6 lg:scroll-px-[max(2rem,calc((100vw_-_72rem)/2_+_2rem))] lg:px-[max(2rem,calc((100vw_-_72rem)/2_+_2rem))]">
-            {events.map((e, i) => {
+          // La animación va en el riel completo y no en cada tarjeta: dentro
+          // de un contenedor con scroll horizontal, view() mediría ese scroll
+          // y no el de la página.
+          <Reveal className="rail mt-12 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 sm:scroll-px-6 sm:px-6 lg:scroll-px-[max(2rem,calc((100vw_-_72rem)/2_+_2rem))] lg:px-[max(2rem,calc((100vw_-_72rem)/2_+_2rem))]">
+            {events.map((e) => {
               const d = dateParts(e);
               const time = startTime(e);
               return (
-                <Reveal
+                <article
                   key={e.id}
-                  as="article"
-                  delay={Math.min(i, 4) * 70}
                   className="group flex w-[78vw] max-w-[19rem] shrink-0 snap-start flex-col sm:w-[19rem]"
                 >
                   <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-foreground/[0.05] ring-1 ring-foreground/10">
@@ -227,12 +235,12 @@ export async function MandagroupHome() {
                       </p>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs text-primary">{VENUE_LABEL[e.venue]}</p>
+                      <p className="text-xs text-primary">{eventVenueLabel(e)}</p>
                       <h3 className="mt-1 line-clamp-2 font-heading text-base font-semibold leading-snug text-foreground">
                         {e.title}
                       </h3>
                       <p className="mt-1 text-xs text-foreground/50">
-                        {[time && `${time} h`, e.lowestPrice ? `Desde ${clp(e.lowestPrice)}` : null]
+                        {[time && `${time} h`, e.soldOut ? "Agotado" : e.lowestPrice ? `Desde ${clp(e.lowestPrice)}` : null]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
@@ -245,13 +253,13 @@ export async function MandagroupHome() {
                     rel="noreferrer"
                     className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-foreground/[0.07] px-5 py-3 text-sm font-semibold text-foreground ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-primary hover:text-background active:scale-[0.98]"
                   >
-                    Comprar entrada
+                    {e.soldOut ? "Ver en Vesti" : "Comprar entrada"}
                     <ArrowUpRight size={15} strokeWidth={2} />
                   </a>
-                </Reveal>
+                </article>
               );
             })}
-          </div>
+          </Reveal>
         )}
       </section>
 

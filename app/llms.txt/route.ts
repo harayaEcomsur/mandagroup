@@ -1,6 +1,6 @@
 import { clientConfig } from "@/config/client.config";
 import { listActiveEvents } from "@/lib/mandagroup-store";
-import { BRANDS, SITE_FAQ } from "@/lib/mandagroup-brands";
+import { BRANDS, SITE_FAQ, eventVenueLabel } from "@/lib/mandagroup-brands";
 
 // /llms.txt (llmstxt.org): resumen en Markdown para asistentes de IA
 // (ChatGPT, Claude, Perplexity) — qué es Manda Group, sus marcas, dónde
@@ -12,7 +12,6 @@ export const revalidate = 900;
 export async function GET() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
   const events = await listActiveEvents();
-  const venueName = (key: string) => BRANDS.find((b) => b.key === key)?.name ?? key;
 
   const lines = [
     "# Manda Group",
@@ -31,7 +30,7 @@ export async function GET() {
     "## Próximas fiestas",
     "",
     ...(events.length
-      ? events.map((e) => `- ${e.eventDate} · ${e.title} (${venueName(e.venue)}): ${e.ticketUrl}`)
+      ? events.map((e) => `- ${e.eventDate} · ${e.title} (${eventVenueLabel(e)}): ${e.ticketUrl}`)
       : ["- No hay fechas a la venta en este momento."]),
     "",
     "## Preguntas frecuentes",

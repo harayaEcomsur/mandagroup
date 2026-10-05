@@ -2,7 +2,8 @@ import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 import { clientConfig } from "@/config/client.config";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { getReservationNumber, listActiveEvents, logDerivation, type Canal, type InstagramScope } from "@/lib/mandagroup-store";
+import { getReservationNumber, listActiveEvents, logDerivation, type Canal, type EventVenue, type InstagramScope } from "@/lib/mandagroup-store";
+import { eventVenueLabel } from "@/lib/mandagroup-brands";
 
 // Tools de derivación del módulo "eventos" (reemplazo de ManyChat): el
 // asistente nunca inventa un número ni un link — siempre los lee en vivo desde
@@ -35,6 +36,10 @@ export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?:
   if (!clientConfig.modules.eventos) return {};
 
   const allowedVenues = scope?.venues;
+  // Sin scope: todo (los 2 locales y Costa Nights). Con scope: solo los
+  // locales de esa cuenta — una cuenta acotada a un local no ofrece las
+  // fiestas Costa Nights en recintos externos.
+  const isAllowed = (venue: EventVenue) => !allowedVenues || (allowedVenues as EventVenue[]).includes(venue);
   const allowReservations = scope?.allowReservations ?? true;
 
   const tools: ToolSet = {
@@ -43,17 +48,23 @@ export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?:
         "Devuelve los eventos/fiestas activos DE HOY EN ADELANTE (los de fechas pasadas ya no aparecen solos), con su fecha real, local y link de entradas. Vienen ordenados por fecha — el primero de la lista es siempre la próxima fiesta. Úsala SIEMPRE antes de derivar a una invitación/entrada, y también cuando pregunten 'cuál es la próxima fiesta' o por eventos de semanas más adelante — nunca asumas cuáles hay ni cuál es el más próximo por tu cuenta.",
       inputSchema: z.object({}),
       execute: async () => {
-        const events = (await listActiveEvents()).filter((e) => !allowedVenues || allowedVenues.includes(e.venue));
+        const events = (await listActiveEvents()).filter((e) => isAllowed(e.venue));
         if (!events.length) {
           return { eventos: [], nota: "No hay eventos activos cargados ahora mismo — indícalo al cliente y ofrece derivar por WhatsApp." };
         }
         return {
           eventos: events.map((e, i) => ({
             id: e.id,
-            local: VENUE_LABEL[e.venue],
+            local: eventVenueLabel(e),
             titulo: e.title,
             fecha: formatEventDate(e.eventDate),
             es_la_mas_proxima: i === 0,
+            // Detalle real de Vesti cuando existe (dirección del recinto,
+            // precio desde, agotado) para que responda "¿dónde es?" o
+            // "¿cuánto cuesta?" sin inventar.
+            ...(e.address ? { direccion: e.address } : {}),
+            ...(e.lowestPrice ? { precio_desde_clp: e.lowestPrice } : {}),
+            ...(e.soldOut ? { agotado: true } : {}),
           })),
         };
       },
@@ -88,12 +99,12 @@ export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?:
       execute: async ({ event_id }) => {
         const events = await listActiveEvents();
         const event = events.find((e) => e.id === event_id);
-        if (!event || (allowedVenues && !allowedVenues.includes(event.venue))) {
+        if (!event || !isAllowed(event.venue)) {
           return { error: "Ese evento ya no está activo — vuelve a llamar listar_eventos_activos para ver las opciones vigentes." };
         }
         logDerivation({ canal, tipo: "invitacion", venue: event.venue, eventId: event.id, eventTitle: event.title, userMessage });
         return {
-          local: VENUE_LABEL[event.venue],
+          local: eventVenueLabel(event),
           titulo: event.title,
           fecha: formatEventDate(event.eventDate),
           link_entradas: event.ticketUrl,

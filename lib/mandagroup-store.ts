@@ -1,5 +1,5 @@
 import { db, jsonb, withDb } from "@/lib/db";
-import { listVestiEvents } from "@/lib/vesti";
+import { listVestiEvents, type VestiTicket } from "@/lib/vesti";
 
 // Almacén del módulo "eventos" (discotecas/fiestas, requiere modules.eventos):
 // número de WhatsApp al que se derivan las reservas y eventos activos con su
@@ -10,12 +10,17 @@ import { listVestiEvents } from "@/lib/vesti";
 // en memoria (demos/desarrollo local).
 
 export type Venue = "renaca" | "vina";
+// Dónde ocurre un evento: los 2 locales, o "costa" = fiestas Costa Nights de
+// la productora Costa Eventos, en recintos externos (Club Naval, Club
+// Español…). Solo existe para eventos importados de Vesti; reservas, scopes
+// de Instagram y eventos manuales siguen siendo de un local (Venue).
+export type EventVenue = Venue | "costa";
 export type DerivationTipo = "reserva" | "invitacion";
 export type Canal = "web" | "whatsapp" | "instagram";
 
 export interface MandagroupEvent {
   id: string;
-  venue: Venue;
+  venue: EventVenue;
   title: string;
   ticketUrl: string;
   eventDate: string; // "YYYY-MM-DD" — la fecha real del evento, no la de carga
@@ -27,6 +32,16 @@ export interface MandagroupEvent {
   imageUrl?: string | null;
   lowestPrice?: number | null;
   startsAt?: string;
+  // Detalle que trae Vesti (ver lib/vesti.ts): recinto ("Club Naval"),
+  // dirección real, tipos de entrada, agotado/reprogramado.
+  place?: string | null;
+  endsAt?: string | null;
+  address?: string | null;
+  comuna?: string | null;
+  geo?: { lat: number; lng: number } | null;
+  tickets?: VestiTicket[];
+  soldOut?: boolean;
+  rescheduled?: boolean;
 }
 
 // "YYYY-MM-DD" de hoy en hora de Chile — mismo truco que ya usa
@@ -38,7 +53,7 @@ function todayCL(): string {
 export interface Derivation {
   canal: Canal;
   tipo: DerivationTipo;
-  venue?: Venue;
+  venue?: EventVenue;
   eventId?: string;
   eventTitle?: string;
   userMessage?: string;
@@ -200,6 +215,14 @@ export async function listActiveEvents(): Promise<MandagroupEvent[]> {
       imageUrl: v.imageUrl,
       lowestPrice: v.lowestPrice,
       startsAt: v.startsAt,
+      place: v.place,
+      endsAt: v.endsAt,
+      address: v.address,
+      comuna: v.comuna,
+      geo: v.geo,
+      tickets: v.tickets,
+      soldOut: v.soldOut,
+      rescheduled: v.rescheduled,
     }));
   return [...active, ...imported].sort(
     (a, b) => a.eventDate.localeCompare(b.eventDate) || (a.startsAt ?? "").localeCompare(b.startsAt ?? "")
@@ -309,7 +332,7 @@ export function logDerivation(entry: Derivation): void {
 export interface DerivationStats {
   total: number;
   porTipo: Record<DerivationTipo, number>;
-  porVenue: Partial<Record<Venue, number>>;
+  porVenue: Partial<Record<EventVenue, number>>;
   porCanal: Record<Canal, number>;
   recientes: (Derivation & { createdAt: string })[];
 }
@@ -330,7 +353,7 @@ export async function derivationStats(days = 30): Promise<DerivationStats> {
       return result.map((r) => ({
         canal: r.canal as Canal,
         tipo: r.tipo as DerivationTipo,
-        venue: (r.venue as Venue | null) ?? undefined,
+        venue: (r.venue as EventVenue | null) ?? undefined,
         eventId: (r.event_id as string | null) ?? undefined,
         eventTitle: (r.event_title as string | null) ?? undefined,
         userMessage: (r.user_message as string | null) ?? undefined,
