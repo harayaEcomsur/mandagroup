@@ -1,7 +1,8 @@
 // Cartas de los restaurantes, rescatadas del hosting anterior de
 // mandagroup.cl (cPanel) y servidas desde /public en las MISMAS URLs de antes
 // (/cmanda.pdf, /carta2026.pdf): hay QR impresos en las mesas que apuntan ahí
-// y a /carbon. Cada página del PDF va además como WebP para verla directo en
+// y a /carbon. /carta.pdf (carta anterior de Carbon, 4 págs.) también se
+// sirve tal cual por si algún QR viejo apunta a ella, aunque no se lista acá. Cada página del PDF va además como WebP para verla directo en
 // el celular — el PDF de Manda pesa 28 MB, la versión web 0,6 MB.
 export interface Carta {
   key: "manda" | "carbon";
