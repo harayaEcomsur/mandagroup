@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 Sorteo VIP Casino - Gran Evento en Vivo 🏆</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0A0518;
+            --card-bg: rgba(20, 10, 38, 0.85);
+            --gold-primary: #FFD700;
+            --gold-secondary: #FFA500;
+            --gold-light: #FFF099;
+            --gold-gradient: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
+            --ruby-red: #D62828;
+            --emerald-green: #00B4D8;
+            --purple-accent: #6A0572;
+            --text-light: #F8F9FA;
+            --text-muted: #A0AAB2;
+            --neon-glow: 0 0 15px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(106, 5, 114, 0.25) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(214, 40, 40, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(10, 5, 24, 0.9) 0%, #05020C 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* HEADER & BANNER */
+        header {
+            background: rgba(10, 5, 24, 0.95);
+            border-bottom: 2px solid #BF953F;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .casino-chip-icon {
+            width: 45px;
+            height: 45px;
+            background: var(--gold-gradient);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            box-shadow: var(--neon-glow);
+            border: 2px dashed #0A0518;
+        }
+
+        h1.app-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            letter-spacing: 2px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-icon {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            color: var(--gold-primary);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-icon:hover {
+            background: var(--gold-gradient);
+            color: #000;
+            box-shadow: var(--neon-glow);
+        }
+
+        /* MAIN CONTAINER */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 25px;
+            padding: 25px;
+            flex: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* CARD STYLE */
+        .panel-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(191, 149, 63, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+
+        .panel-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: var(--gold-gradient);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .card-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--gold-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 10px;
+        }
+
+        /* LEFT PANEL: PARTICIPANTS & SETTINGS */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        textarea {
+            width: 100%;
+            height: 220px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(191, 149, 63, 0.4);
+            border-radius: 10px;
+            padding: 12px;
+            color: #FFF;
+            font-size: 0.95rem;
+            resize: vertical;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--gold-primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .duplicate-alert {
+            background: rgba(214, 40, 40, 0.2);
+            border: 1px solid var(--ruby-red);
+            color: #FF8080;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .duplicate-alert.active {
+            display: flex;
+        }
+
+        .btn-clean {
+            background: var(--ruby-red);
+            color: #FFF;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .checkbox-option input {
+            accent-color: var(--gold-primary);
+            width: 18px;
+            height: 18px;
+        }
+
+        /* RIGHT PANEL: ROULETTE & STAGE */
+        .stage-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 550px;
+        }
+
+        .roulette-container {
+            position: relative;
+            width: 380px;
+            height: 380px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .roulette-outer-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, #2A103D 0%, #0A0518 100%);
+            border: 12px solid #BF953F;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9), inset 0 0 20px rgba(0,0,0,0.8), var(--neon-glow);
+        }
+
+        /* BULBS AROUND THE WHEEL */
+        .bulbs-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .bulb {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #FFF;
+            box-shadow: 0 0 8px #FFF;
+            top: 50%; left: 50%;
+            transform-origin: 0 0;
+        }
+
+        canvas#rouletteCanvas {
+            position: absolute;
+            width: 330px;
+            height: 330px;
+            border-radius: 50%;
+            transition: transform 5s cubic-bezier(0.15, 0.99, 0.15, 0.99);
+        }
+
+        .roulette-pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 32px solid var(--ruby-red);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
+            z-index: 5;
+        }
+
+        .roulette-center-cap {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: var(--gold-gradient);
+            border-radius: 50%;
+            z-index: 4;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            border: 3px solid #FFF;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+
+        /* SPIN BUTTON */
+        .btn-spin {
+            background: var(--gold-gradient);
+            color: #0A0518;
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            font-weight: 900;
+            padding: 16px 50px;
+            border: 2px solid #FFF;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4), inset 0 2px 4px rgba(255,255,255,0.8);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn-spin:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 12px 35px rgba(255, 215, 0, 0.7), var(--neon-glow);
+        }
+
+        .btn-spin:active:not(:disabled) {
+            transform: translateY(2px) scale(0.98);
+        }
+
+        .btn-spin:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .shortcut-hint {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .shortcut-key {
+            background: rgba(255,255,255,0.15);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: var(--gold-light);
+            font-weight: bold;
+        }
+
+        /* WINNER OVERLAY / POPUP */
+        .winner-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(5, 2, 12, 0.92);
+            backdrop-filter: blur(15px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .winner-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .winner-card {
+            background: linear-gradient(135deg, rgba(30,15,50,0.95), rgba(10,5,20,0.98));
+            border: 3px solid #BF953F;
+            border-radius: 24px;
+            padding: 40px 60px;
+            text-align: center;
+            box-shadow: 0 0 80px rgba(255, 215, 0, 0.5), inset 0 0 30px rgba(255, 215, 0, 0.2);
+            transform: scale(0.7);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90%;
+            width: 650px;
+        }
+
+        .winner-modal.active .winner-card {
+            transform: scale(1);
+        }
+
+        .winner-subtitle {
+            font-family: 'Cinzel', serif;
+            color: var(--gold-primary);
+            font-size: 1.4rem;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .winner-name {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #FFF;
+            text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px var(--gold-primary);
+            margin: 20px 0;
+            word-break: break-word;
+            line-height: 1.1;
+        }
+
+        .winner-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        .btn-action {
+            padding: 12px 25px;
+            border-radius: 30px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-continue {
+            background: var(--gold-gradient);
+            color: #000;
+        }
+
+        .btn-continue:hover {
+            box-shadow: var(--neon-glow);
+            transform: scale(1.05);
+        }
+
+        .btn-remove {
+            background: rgba(214, 40, 40, 0.8);
+            color: #FFF;
+            border: 1px solid var(--ruby-red);
+        }
+
+        .btn-remove:hover {
+            background: var(--ruby-red);
+            transform: scale(1.05);
+        }
+
+        /* HISTORY PANEL */
+        .history-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .history-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .history-badge {
+            background: var(--gold-gradient);
+            color: #000;
+            font-weight: bold;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        /* SCROLLBAR STYLE */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(191, 149, 63, 0.5);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo-container">
+            <div class="casino-chip-icon">🎰</div>
+            <h1 class="app-title">GRAND CASINO - SORTEO LIVE</h1>
+        </div>
+        <div class="header-controls">
+            <button class="btn-icon" id="toggleSoundBtn" onclick="toggleSound()">
+                <span id="soundIcon">🔊</span> Sonido: ON
+            </button>
+            <button class="btn-icon" onclick="toggleFullscreen()">
+                📺 Pantalla Completa
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT LAYOUT -->
+    <div class="main-layout">
+        
+        <!-- LEFT PANEL: CONTROL & PARTICIPANTS -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <div class="panel-card">
+                <div class="card-title">
+                    <span>👥</span> Participantes (Max 1,000)
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stat-box">
+                        <div class="stat-number" id="countTotal">0</div>
+                        <div class="stat-label">Ingresados</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="countUnique">0</div>
+                        <div class="stat-label">Válidos</div>
+                    </div>
+                </div>
+
+                <!-- ALERT FOR DUPLICATES -->
+                <div class="duplicate-alert" id="duplicateAlert">
+                    <span>🚨 Duplicados detectados!</span>
+                    <button class="btn-clean" onclick="removeDuplicates()">Limpiar</button>
+                </div>
+
+                <div class="input-group">
+                    <label for="participantsInput">Ingresa un nombre por línea:</label>
+                    <textarea id="participantsInput" placeholder="Carlos Mendoza&#10;Ana María Torres&#10;Roberto Gómez&#10;Sofía Ramírez..." oninput="updateParticipants()"></textarea>
+                </div>
+
+                <label class="checkbox-option">
+                    <input type="checkbox" id="autoRemoveCheck">
+                    <span>Remover ganador automáticamente</span>
+                </label>
+            </div>
+
+            <!-- HISTORIAL -->
+            <div class="panel-card" style="flex: 1;">
+                <div class="card-title" style="justify-content: space-between;">
+                    <span>📜 Historial de Ganadores</span>
+                    <button class="btn-icon" onclick="clearHistory()" style="padding: 2px 8px; font-size: 0.75rem;">Limpiar</button>
+                </div>
+                <ul class="history-list" id="historyList">
+                    <!-- History items will appear here -->
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- RIGHT PANEL: ROULETTE & STAGE -->
+        <div class="panel-card stage-panel">
+            
+            <div class="roulette-container">
+                <div class="roulette-pointer"></div>
+                <div class="roulette-outer-ring">
+                    <div class="bulbs-container" id="bulbsContainer"></div>
+                </div>
+                <canvas id="rouletteCanvas" width="600" height="600"></canvas>
+                <div class="roulette-center-cap">🏆</div>
+            </div>
+
+            <button class="btn-spin" id="spinBtn" onclick="spinWheel()">
+                🎲 SORTEAR GANADOR
+            </button>
+            <div class="shortcut-hint">
+                Presiona <span class="shortcut-key">F9</span> o <span class="shortcut-key">ESPACIO</span> para sortear
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- WINNER CELEBRATION MODAL -->
+    <div class="winner-modal" id="winnerModal">
+        <div class="winner-card">
+            <div class="winner-subtitle">✨ ¡TENEMOS UN GANADOR! ✨</div>
+            <div class="winner-name" id="winnerDisplay">¡NOMBRE DEL GANADOR!</div>
+            <div class="winner-actions">
+                <button class="btn-action btn-continue" onclick="closeWinnerModal(false)"> Continuar</button>
+                <button class="btn-action btn-remove" onclick="closeWinnerModal(true)">🗑️ Eliminar de la Lista</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO SYNTHESIS & WEBAUDIO SOUND EFFECTS -->
+    <script>
+        // WebAudio API Context for pure standalone SFX without external audio files
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').innerText = soundEnabled ? '🔊' : '🔇';
+            document.getElementById('toggleSoundBtn').innerText = (soundEnabled ? '🔊 Sonido: ON' : '🔇 Sonido: OFF');
+        }
+
+        function playTickSound() {
+            if (!soundEnabled) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.04);
+            
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.04);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.04);
+        }
+
+        function playVictorySound() {
+            if (!soundEnabled) return;
+            initAudio();
+            const now = audioCtx.currentTime;
+            
+            // Fanfare notes (C4, E4, G4, C5)
+            const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99];
+            notes.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                
+                gain.gain.setValueAtTime(0.3, now + idx * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + idx * 0.1);
+                osc.stop(now + idx * 0.1 + 0.4);
+            });
+        }
+
+        // ROULETTE & APP STATE
+        let participants = [];
+        let currentRotation = 0;
+        let isSpinning = false;
+        let lastWinner = "";
+        let winnersHistory = [];
+
+        const canvas = document.getElementById('rouletteCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // INITIALIZATION
+        window.onload = () => {
+            generateOuterBulbs();
+            // Default sample data
+            document.getElementById('participantsInput').value = 
+                "Ana Martínez
+Carlos Mendoza
+Elena Rostova
+Gabriel Silva
+Isabel Torres
+Javier López
+Lucía Fernandez
+Mateo Gómez
+Natalia Vega
+Oscar Benítez";
+            updateParticipants();
+            
+            // Global keybinds
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'F9' || (e.code === 'Space' && document.activeElement.tagName !== 'TEXTAREA')) {
+                    e.preventDefault();
+                    if (!isSpinning) spinWheel();
+                }
+            });
+        };
+
+        function generateOuterBulbs() {
+            const container = document.getElementById('bulbsContainer');
+            const totalBulbs = 24;
+            const radius = 175; // px from center
+            for (let i = 0; i < totalBulbs; i++) {
+                const bulb = document.createElement('div');
+                bulb.className = 'bulb';
+                const angle = (i / totalBulbs) * (2 * Math.PI);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                bulb.style.transform = `translate(${x}px, ${y}px)`;
+                container.appendChild(bulb);
+            }
+        }
+
+        function updateParticipants() {
+            const text = document.getElementById('participantsInput').value;
+            const lines = text.split('
+').map(l => l.trim()).filter(l => l.length > 0);
+            
+            document.getElementById('countTotal').innerText = lines.length;
+
+            // Check duplicates
+            const unique = [...new Set(lines)];
+            document.getElementById('countUnique').innerText = unique.length;
+
+            const hasDuplicates = lines.length !== unique.length;
+            const alertBox = document.getElementById('duplicateAlert');
+            if (hasDuplicates) {
+                alertBox.classList.add('active');
+            } else {
+                alertBox.classList.remove('active');
+            }
+
+            participants = lines;
+            drawWheel();
+        }
+
+        function removeDuplicates() {
+            const text = document.getElementById('participantsInput').value;
+            const lines = text.split('
+').map(l => l.trim()).filter(l => l.length > 0);
+            const unique = [...new Set(lines)];
+            document.getElementById('participantsInput').value = unique.join('
+');
+            updateParticipants();
+        }
+
+        // DRAW ROULETTE CANVAS
+        function drawWheel() {
+            const numSegments = participants.length;
+            const width = canvas.width;
+            const height = canvas.height;
+            const center = width / 2;
+            const radius = width / 2;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (numSegments === 0) {
+                ctx.fillStyle = '#1E0F32';
+                ctx.beginPath();
+                ctx.arc(center, center, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#A0AAB2';
+                ctx.font = 'bold 20px Montserrat';
+                ctx.textAlign = 'center';
+                ctx.fillText('Sin Participantes', center, center);
+                return;
+            }
+
+            const arcSize = (2 * Math.PI) / numSegments;
+            const colors = [
+                '#D62828', '#112A46', '#FFD700', '#6A0572', 
+                '#00B4D8', '#2B9348', '#E85D04', '#3A0CA3'
+            ];
+
+            for (let i = 0; i < numSegments; i++) {
+                const angle = i * arcSize;
+                
+                // Segment Fill
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.beginPath();
+                ctx.moveTo(center, center);
+                ctx.arc(center, center, radius, angle, angle + arcSize);
+                ctx.lineTo(center, center);
+                ctx.fill();
+
+                // Inner Border
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Text Formatting
+                ctx.save();
+                ctx.translate(center, center);
+                ctx.rotate(angle + arcSize / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#FFFFFF';
+                
+                // Adjust font size dynamically
+                const fontSize = Math.max(12, Math.min(22, 300 / numSegments));
+                ctx.font = `bold ${fontSize}px Montserrat`;
+                ctx.shadowColor = "black";
+                ctx.shadowBlur = 4;
+                
+                let name = participants[i];
+                if (name.length > 18) name = name.substring(0, 15) + '...';
+                
+                ctx.fillText(name, radius - 20, fontSize / 3);
+                ctx.restore();
+            }
+        }
+
+        // SPIN LOGIC
+        function spinWheel() {
+            if (isSpinning || participants.length === 0) return;
+
+            initAudio();
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+
+            const totalSegments = participants.length;
+            const segmentAngle = 360 / totalSegments;
+
+            // Pick a random winner index
+            const winnerIndex = Math.floor(Math.random() * totalSegments);
+            lastWinner = participants[winnerIndex];
+
+            // Calculate target rotation angle so pointer aligns with selected segment
+            // Pointer is at top (270 degrees in standard canvas coords)
+            const spins = 5 + Math.floor(Math.random() * 3); // 5 to 7 full rotations
+            const targetSegmentCenter = (winnerIndex * segmentAngle) + (segmentAngle / 2);
+            
+            // Align target with top pointer position
+            const finalAngle = (spins * 360) + (270 - targetSegmentCenter);
+
+            currentRotation = finalAngle;
+            
+            // Apply rotation via CSS transform
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            // Sound ticks timing simulation
+            let ticks = 0;
+            const maxTicks = 35;
+            const tickInterval = setInterval(() => {
+                ticks++;
+                playTickSound();
+                if (ticks >= maxTicks) clearInterval(tickInterval);
+            }, 120);
+
+            // Wait for transition to complete (5s)
+            setTimeout(() => {
+                isSpinning = false;
+                document.getElementById('spinBtn').disabled = false;
+                showWinner(lastWinner);
+            }, 5200);
+        }
+
+        function showWinner(winnerName) {
+            playVictorySound();
+            
+            // Trigger Confetti
+            confetti({
+                particleCount: 150,
+                spread: 100,
+                origin: { y: 0.6 },
+                colors: ['#FFD700', '#FFA500', '#FFFFFF', '#D62828']
+            });
+
+            document.getElementById('winnerDisplay').innerText = winnerName;
+            document.getElementById('winnerModal').classList.add('active');
+
+            // Add to history
+            addHistory(winnerName);
+        }
+
+        function closeWinnerModal(shouldRemove) {
+            document.getElementById('winnerModal').classList.remove('active');
+            
+            const autoRemove = document.getElementById('autoRemoveCheck').checked;
+            if (shouldRemove || autoRemove) {
+                removeParticipant(lastWinner);
+            }
+        }
+
+        function removeParticipant(name) {
+            const index = participants.indexOf(name);
+            if (index > -1) {
+                participants.splice(index, 1);
+                document.getElementById('participantsInput').value = participants.join('
+');
+                updateParticipants();
+            }
+        }
+
+        function addHistory(name) {
+            winnersHistory.unshift({
+                name: name,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+            });
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            winnersHistory.forEach((item, idx) => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <span><strong>${item.name}</strong></span>
+                    <span class="history-badge">#${winnersHistory.length - idx} • ${item.time}</span>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function clearHistory() {
+            winnersHistory = [];
+            renderHistory();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
