@@ -45,6 +45,9 @@ export interface MandagroupEvent {
   tickets?: VestiTicket[];
   soldOut?: boolean;
   rescheduled?: boolean;
+  // Destacado a mano desde el panel: va al hero por encima de las reglas
+  // automáticas (ver lib/mandagroup-hero.ts).
+  featured?: boolean;
 }
 
 // "YYYY-MM-DD" de hoy en hora de Chile — mismo truco que ya usa
@@ -65,6 +68,7 @@ export interface Derivation {
 const RESERVAS_WHATSAPP_KEY = "mandagroup_reservas_whatsapp";
 const INSTAGRAM_SCOPES_KEY = "mandagroup_instagram_scopes";
 const HIDDEN_VESTI_KEY = "mandagroup_hidden_vesti_events";
+const FEATURED_KEY = "mandagroup_featured_events";
 
 // Qué puede ofrecer el asistente en una cuenta de Instagram puntual — sin
 // scope guardado para esa cuenta (el caso por defecto), no hay restricción:
@@ -83,13 +87,14 @@ interface Store {
   derivations: (Derivation & { createdAt: string })[];
   instagramScopes: Record<string, InstagramScope>;
   hiddenVesti: string[];
+  featured: string[];
 }
 
 const g = globalThis as unknown as { __mandagroupStore?: Store };
 
 function store(): Store {
   if (!g.__mandagroupStore) {
-    g.__mandagroupStore = { reservasWhatsapp: null, events: [], derivations: [], instagramScopes: {}, hiddenVesti: [] };
+    g.__mandagroupStore = { reservasWhatsapp: null, events: [], derivations: [], instagramScopes: {}, hiddenVesti: [], featured: [] };
   }
   return g.__mandagroupStore;
 }
@@ -200,7 +205,12 @@ export async function listEvents(): Promise<MandagroupEvent[]> {
 // limpio) y el importado no se duplica.
 export async function listActiveEvents(): Promise<MandagroupEvent[]> {
   const today = todayCL();
-  const [manual, vesti, hidden] = await Promise.all([listEvents(), listVestiEvents(), getHiddenVestiIds()]);
+  const [manual, vesti, hidden, featured] = await Promise.all([
+    listEvents(),
+    listVestiEvents(),
+    getHiddenVestiIds(),
+    getFeaturedEventIds(),
+  ]);
   const active = manual.filter((e) => e.active && e.eventDate >= today).map((e) => ({ ...e, source: "manual" as const }));
   const manualUrls = new Set(active.map((e) => e.ticketUrl.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")));
   const imported: MandagroupEvent[] = vesti
@@ -230,8 +240,40 @@ export async function listActiveEvents(): Promise<MandagroupEvent[]> {
       soldOut: v.soldOut,
       rescheduled: v.rescheduled,
     }));
-  return [...active, ...imported].sort(
+  return [...active, ...imported].map((e) => (featured.includes(e.id) ? { ...e, featured: true } : e)).sort(
     (a, b) => a.eventDate.localeCompare(b.eventDate) || (a.startsAt ?? "").localeCompare(b.startsAt ?? "")
+  );
+}
+
+// --- Eventos destacados en el hero ---
+// Ids tal como los devuelve listActiveEvents: el id del evento manual, o
+// "vesti:<id>" para los importados.
+
+export async function getFeaturedEventIds(): Promise<string[]> {
+  return withDb(
+    async () => {
+      const sql = db();
+      const rows = await sql`SELECT value FROM settings WHERE key = ${FEATURED_KEY} LIMIT 1`;
+      return (rows[0]?.value as { ids: string[] } | undefined)?.ids ?? [];
+    },
+    () => store().featured
+  );
+}
+
+export async function setEventFeatured(eventId: string, featured: boolean): Promise<void> {
+  const current = await getFeaturedEventIds();
+  const next = featured ? Array.from(new Set([...current, eventId])) : current.filter((id) => id !== eventId);
+  await withDb(
+    async () => {
+      const sql = db();
+      await sql`
+        INSERT INTO settings (key, value) VALUES (${FEATURED_KEY}, ${jsonb({ ids: next })})
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `;
+    },
+    () => {
+      store().featured = next;
+    }
   );
 }
 

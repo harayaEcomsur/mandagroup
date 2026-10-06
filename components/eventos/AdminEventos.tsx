@@ -73,6 +73,7 @@ interface State {
   pausedThreads: PausedThread[];
   vestiEvents: VestiEvent[];
   hiddenVesti: string[];
+  featuredIds: string[]; // id manual o "vesti:<vestiId>"
 }
 
 const VENUE_LABEL: Record<EventVenue, string> = {
@@ -95,6 +96,32 @@ const IG_ACCOUNT_LABEL: Record<string, string> = {
 // anuncios a quien no calza con la segmentación (típicamente el dueño).
 const AD_LIBRARY = (q: string) =>
   `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=CL&media_type=all&search_type=keyword_unordered&q=${encodeURIComponent(q)}`;
+
+// "Destacar": fuerza un evento en el hero de la home por encima de las reglas
+// automáticas (próxima noche, prioridad por local). Puede ser cualquier evento,
+// incluida una promoción.
+function FeatureButton({
+  featured,
+  disabled,
+  onClick,
+}: {
+  featured: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={featured}
+      className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+        featured ? "bg-primary text-background" : "bg-foreground/10 text-foreground/60 hover:text-foreground"
+      }`}
+    >
+      {featured ? "★ Destacado" : "☆ Destacar"}
+    </button>
+  );
+}
 
 const UNRESTRICTED: InstagramScope = { enabled: true, venues: ["renaca", "vina"], allowReservations: true };
 
@@ -206,6 +233,12 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
                   {ev.ticketUrl}
                 </a>
               </div>
+              <div className="flex items-center gap-2">
+              <FeatureButton
+                featured={state.featuredIds.includes(ev.id)}
+                disabled={saving}
+                onClick={() => patch({ action: "setEventFeatured", eventId: ev.id, featured: !state.featuredIds.includes(ev.id) })}
+              />
               <button
                 disabled={saving}
                 onClick={() => patch({ action: "setEventActive", id: ev.id, active: !ev.active })}
@@ -215,6 +248,7 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
               >
                 {ev.active ? "Activo" : "Inactivo"}
               </button>
+              </div>
             </div>
           ))}
         </div>
@@ -265,7 +299,9 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
         <h2 className="font-heading text-lg font-semibold text-foreground">Eventos desde Vesti</h2>
         <p className="mt-1 text-sm text-foreground/60">
           Todo evento futuro publicado en Vesti por Manda Reñaca, Manda Viña, Costa Eventos (Costa Nights) o Eventos & Stand Up aparece
-          solo en el sitio y lo ofrece el asistente. Se actualiza cada 15 minutos. Oculta los que no quieras mostrar.
+          solo en el sitio y lo ofrece el asistente. "Destacar" lo pone en la portada (hero) por sobre la próxima fecha;
+          sin destacados, la portada muestra la próxima noche priorizando Manda Viña, Manda Reñaca, Costa Nights y
+          Stand Up, en ese orden. Se actualiza cada 15 minutos. Oculta los que no quieras mostrar.
         </p>
         <div className="mt-4 space-y-3">
           {state.vestiEvents.length === 0 && (
@@ -297,6 +333,17 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
                     Ver en Vesti
                   </a>
                 </div>
+                <FeatureButton
+                  featured={state.featuredIds.includes(`vesti:${ev.vestiId}`)}
+                  disabled={saving || hidden}
+                  onClick={() =>
+                    patch({
+                      action: "setEventFeatured",
+                      eventId: `vesti:${ev.vestiId}`,
+                      featured: !state.featuredIds.includes(`vesti:${ev.vestiId}`),
+                    })
+                  }
+                />
                 <button
                   disabled={saving}
                   onClick={() => patch({ action: "setVestiHidden", vestiId: ev.vestiId, hidden: !hidden })}

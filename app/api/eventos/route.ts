@@ -13,6 +13,8 @@ import {
   setInstagramScope,
   getHiddenVestiIds,
   setVestiHidden,
+  getFeaturedEventIds,
+  setEventFeatured,
 } from "@/lib/mandagroup-store";
 import { listVestiEvents } from "@/lib/vesti";
 import { recentChats } from "@/lib/chat-log";
@@ -33,7 +35,7 @@ export async function GET(req: Request) {
   const user = await currentAdminUser(claveFromRequest(req));
   if (!user) return Response.json({ error: "No autorizado" }, { status: 401 });
 
-  const [reservasWhatsapp, events, stats, chats, instagramScopes, pausedThreads, vestiEvents, hiddenVesti] = await Promise.all([
+  const [reservasWhatsapp, events, stats, chats, instagramScopes, pausedThreads, vestiEvents, hiddenVesti, featuredIds] = await Promise.all([
     getReservationNumber(),
     listEvents(),
     derivationStats(30),
@@ -45,6 +47,7 @@ export async function GET(req: Request) {
     listPausedThreads(),
     listVestiEvents(),
     getHiddenVestiIds(),
+    getFeaturedEventIds(),
   ]);
   return Response.json({
     reservasWhatsapp,
@@ -60,6 +63,8 @@ export async function GET(req: Request) {
     // asistente salvo los que estén en hiddenVesti.
     vestiEvents,
     hiddenVesti,
+    // Ids destacados en el hero: id manual o "vesti:<vestiId>".
+    featuredIds,
   });
 }
 
@@ -83,6 +88,7 @@ const patchSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("resumeInstagramThread"), senderId: z.string().min(1) }),
   z.object({ action: z.literal("setVestiHidden"), vestiId: z.string().min(1), hidden: z.boolean() }),
+  z.object({ action: z.literal("setEventFeatured"), eventId: z.string().min(1), featured: z.boolean() }),
 ]);
 
 export async function PATCH(req: Request) {
@@ -108,11 +114,15 @@ export async function PATCH(req: Request) {
     });
   } else if (parsed.data.action === "setVestiHidden") {
     await setVestiHidden(parsed.data.vestiId, parsed.data.hidden);
+  } else if (parsed.data.action === "setEventFeatured") {
+    await setEventFeatured(parsed.data.eventId, parsed.data.featured);
   } else {
     await resumeThread(parsed.data.senderId);
   }
   // La home muestra la cartelera: que un evento agregado/ocultado se vea ya,
   // sin esperar la regeneración de 5 min.
-  if (["upsertEvent", "setEventActive", "setVestiHidden"].includes(parsed.data.action)) revalidatePath("/");
+  if (["upsertEvent", "setEventActive", "setVestiHidden", "setEventFeatured"].includes(parsed.data.action)) {
+    revalidatePath("/");
+  }
   return Response.json({ ok: true });
 }

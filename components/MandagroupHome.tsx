@@ -9,6 +9,7 @@ import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
 import { vestiCompanyUrl } from "@/lib/vesti";
 import { BRANDS, SITE_FAQ, eventVenueLabel, type Brand } from "@/lib/mandagroup-brands";
 import { buildMandagroupJsonLd } from "@/lib/mandagroup-seo";
+import { pickHero, splitEvents } from "@/lib/mandagroup-hero";
 
 
 
@@ -64,7 +65,12 @@ export async function MandagroupHome() {
     const flyer = events.find((e) => e.venue === b.key && e.imageUrl)?.imageUrl ?? null;
     return feeds[i]?.[0]?.mediaUrl ?? (b.key === "vina" ? flyer : null) ?? b.fallbackImage ?? flyer;
   };
-  const nextWithFlyer = events.find((e) => e.imageUrl);
+  // Hero: destacados a mano, o la próxima noche (hasta 2 eventos, en orden de
+  // prioridad). Promociones de varios días: sección propia. Cartelera: solo
+  // noches de fiesta. Ver lib/mandagroup-hero.ts.
+  const hero = pickHero(events);
+  const { nights, promos } = splitEvents(events);
+  const heroSameDate = hero ? hero.events.every((e) => e.eventDate === hero.events[0].eventDate) : false;
   const posts = feeds
     .flatMap((media, i) => (media ?? []).map((m) => ({ ...m, handle: BRANDS[i].handle })))
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
@@ -127,44 +133,129 @@ export async function MandagroupHome() {
             </div>
           </Reveal>
 
-          {nextWithFlyer?.imageUrl && (
+          {hero && (
             <Reveal mode="load" delay={150} className="w-full max-w-sm lg:col-span-4 lg:col-start-9 lg:max-w-none lg:pl-4">
-              <a
-                href={nextWithFlyer.ticketUrl}
-                data-pixel-event={nextWithFlyer.title}
-                target="_blank"
-                rel="noreferrer"
-                className="group block rounded-[1.75rem] bg-foreground/[0.06] p-2 ring-1 ring-foreground/10 backdrop-blur-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1"
-              >
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[1.25rem]">
-                  <Image
-                    src={nextWithFlyer.imageUrl}
-                    alt={`Flyer de ${nextWithFlyer.title}`}
-                    fill
-                    // Sin lazy (en escritorio está a la vista de entrada), pero
-                    // sin prioridad alta: en celular queda bajo el pliegue y no
-                    // debe competir con la foto del hero (el LCP).
-                    loading="eager"
-                    sizes="(min-width: 1024px) 30vw, 90vw"
-                    className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  />
+              <div className="rounded-[1.75rem] bg-foreground/[0.06] p-2 ring-1 ring-foreground/10 backdrop-blur-sm">
+                <div className={`grid gap-2 ${hero.events.length > 1 ? "grid-cols-2" : ""}`}>
+                  {hero.events.map((e) => (
+                    <a
+                      key={e.id}
+                      href={e.ticketUrl}
+                      data-pixel-event={e.title}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group relative block aspect-[4/5] overflow-hidden rounded-[1.25rem] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1"
+                    >
+                      <Image
+                        src={e.imageUrl!}
+                        alt={`Flyer de ${e.title}`}
+                        fill
+                        // Sin lazy (en escritorio está a la vista de entrada), pero
+                        // sin prioridad alta: en celular queda bajo el pliegue y no
+                        // debe competir con la foto del hero (el LCP).
+                        loading="eager"
+                        sizes={hero.events.length > 1 ? "(min-width: 1024px) 15vw, 45vw" : "(min-width: 1024px) 30vw, 90vw"}
+                        className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                      />
+                    </a>
+                  ))}
                 </div>
                 <div className="flex items-center justify-between gap-4 px-3 pb-2 pt-4">
                   <div className="min-w-0">
-                    <p className="text-xs text-foreground/60">Próxima fecha · {eventVenueLabel(nextWithFlyer)}</p>
+                    <p className="truncate text-xs text-foreground/60">
+                      {hero.featured ? "Destacado" : "Próxima fecha"} ·{" "}
+                      {hero.events.length > 1 ? `${hero.events.length + hero.extra} eventos` : eventVenueLabel(hero.events[0])}
+                    </p>
                     <p className="mt-1 truncate font-heading text-base font-semibold text-foreground first-letter:uppercase">
-                      {dateParts(nextWithFlyer).long}
+                      {hero.events.length === 1 && hero.events[0].lastDate && hero.events[0].lastDate !== hero.events[0].eventDate
+                        ? `Hasta el ${untilDate(hero.events[0].lastDate)}`
+                        : heroSameDate
+                          ? dateParts(hero.events[0]).long
+                          : "Próximas fechas"}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-background">
-                    Entradas
-                  </span>
+                  {hero.events.length === 1 ? (
+                    <a
+                      href={hero.events[0].ticketUrl}
+                      data-pixel-event={hero.events[0].title}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-background transition-transform active:scale-[0.98]"
+                    >
+                      Entradas
+                    </a>
+                  ) : (
+                    <a
+                      href="#eventos"
+                      className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-background transition-transform active:scale-[0.98]"
+                    >
+                      {hero.extra ? `+${hero.extra} más` : "Ver fechas"}
+                    </a>
+                  )}
                 </div>
-              </a>
+              </div>
             </Reveal>
           )}
         </Container>
       </section>
+
+      {/* Promociones: ocasiones de varios días (Cyber Days, gift cards…). No son
+          una noche de fiesta, pero merecen vitrina propia, separada de la
+          cartelera. Solo aparece si hay alguna vigente. */}
+      {promos.length > 0 && (
+        <section id="promociones" className="scroll-mt-24 pt-24 sm:pt-32">
+          <Container>
+            <Reveal>
+              <h2 className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+                Promociones
+              </h2>
+            </Reveal>
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
+              {promos.map((p) => (
+                <Reveal key={p.id} as="article">
+                  <a
+                    href={p.ticketUrl}
+                    data-pixel-event={p.title}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group flex gap-5 rounded-2xl bg-foreground/[0.04] p-3 ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-foreground/[0.07]"
+                  >
+                    {p.imageUrl && (
+                      <div className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-xl sm:w-36">
+                        <Image
+                          src={p.imageUrl}
+                          alt={`Flyer de ${p.title}`}
+                          fill
+                          sizes="9rem"
+                          className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
+                        />
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-1 flex-col py-1 pr-2">
+                      <p className="text-xs text-primary">{eventVenueLabel(p)}</p>
+                      <h3 className="mt-1 line-clamp-3 font-heading text-base font-semibold leading-snug text-foreground">
+                        {p.title}
+                      </h3>
+                      <p className="mt-2 text-xs text-foreground/50">
+                        {[
+                          p.lastDate ? `Hasta el ${untilDate(p.lastDate)}` : null,
+                          p.lowestPrice ? `Desde ${clp(p.lowestPrice)}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                      <span className="mt-auto inline-flex items-center gap-2 pt-4 text-sm font-semibold text-foreground group-hover:text-primary">
+                        Ver promoción
+                        <ArrowUpRight size={15} strokeWidth={2} />
+                      </span>
+                    </div>
+                  </a>
+                </Reveal>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* Cartelera: riel horizontal de flyers (todo lo que está a la venta en
           Vesti + lo cargado a mano), cada uno con su link de compra. */}
@@ -199,7 +290,7 @@ export async function MandagroupHome() {
           </Reveal>
         </Container>
 
-        {events.length === 0 ? (
+        {nights.length === 0 ? (
           <Container>
             <div className="mt-12 rounded-2xl bg-foreground/[0.04] p-10 ring-1 ring-foreground/10">
               <p className="font-heading text-xl font-semibold text-foreground">No hay fechas a la venta ahora mismo.</p>
@@ -213,7 +304,7 @@ export async function MandagroupHome() {
           // de un contenedor con scroll horizontal, view() mediría ese scroll
           // y no el de la página.
           <Reveal className="rail mt-12 flex snap-x snap-mandatory scroll-px-4 gap-5 overflow-x-auto px-4 pb-4 sm:scroll-px-6 sm:px-6 lg:scroll-px-[max(2rem,calc((100vw_-_72rem)/2_+_2rem))] lg:px-[max(2rem,calc((100vw_-_72rem)/2_+_2rem))]">
-            {events.map((e) => {
+            {nights.map((e) => {
               const d = dateParts(e);
               const time = startTime(e);
               return (
