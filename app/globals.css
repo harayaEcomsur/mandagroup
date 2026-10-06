@@ -95,3 +95,9 @@ html {
 .rail::-webkit-scrollbar {
   display: none;
 }
+
+/* Selección de texto con el color de la marca (no el azul del navegador). */
+::selection {
+  background-color: rgb(var(--color-primary) / 0.35);
+  color: rgb(var(--color-foreground));
+}

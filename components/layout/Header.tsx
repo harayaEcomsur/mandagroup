@@ -1,12 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import type { ClientConfig } from "@/config/schema";
 
 export function Header({ config }: { config: ClientConfig }) {
   const [open, setOpen] = useState(false);
+  // Link de página (ej. /carta) activo cuando estás en ella; los anclas de la
+  // home (/#eventos) no se marcan.
+  const pathname = usePathname();
+  const isCurrent = (href: string) => !href.includes("#") && href === pathname;
   const { branding, meta, modules } = config;
 
   const links = branding.navLinks ?? ([
@@ -43,7 +48,12 @@ export function Header({ config }: { config: ClientConfig }) {
         </a>
         <nav className="hidden gap-6 text-sm font-medium text-foreground/70 sm:flex">
           {links.map((link) => (
-            <a key={link.href} href={link.href} className="hover:text-primary">
+            <a
+              key={link.href}
+              href={link.href}
+              aria-current={isCurrent(link.href) ? "page" : undefined}
+              className={`hover:text-primary ${isCurrent(link.href) ? "text-primary" : ""}`}
+            >
               {link.label}
             </a>
           ))}

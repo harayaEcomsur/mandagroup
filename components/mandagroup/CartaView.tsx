@@ -1,13 +1,15 @@
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import type { Carta } from "@/lib/mandagroup-cartas";
+import { Reveal } from "@/components/mandagroup/Reveal";
 
 // Una carta lista para leer en el celular: sus páginas como imagen (la
 // primera con prioridad, el resto lazy) y el PDF original para descargar.
 export function CartaView({ carta, priority = false }: { carta: Carta; priority?: boolean }) {
   return (
-    <section id={carta.key} className="scroll-mt-24">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    // scroll-mt: header fijo + barra de cartas (CartaNav) — el título no queda tapado.
+    <section id={carta.key} className="scroll-mt-40 sm:scroll-mt-44">
+      <Reveal className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-4">
           {carta.logos.map((l) => (
             // eslint-disable-next-line @next/next/no-img-element -- logo local chico
@@ -32,7 +34,7 @@ export function CartaView({ carta, priority = false }: { carta: Carta; priority?
           Descargar PDF
           <ArrowUpRight size={15} strokeWidth={2} />
         </a>
-      </div>
+      </Reveal>
       <div className="mt-8 flex flex-col gap-4">
         {carta.pages.map((p, i) => (
           <Image

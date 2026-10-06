@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Star } from "lucide-react";
 
 type Venue = "renaca" | "vina";
 // Eventos importados también pueden ser de Costa Nights (Costa Eventos).
@@ -118,7 +119,10 @@ function FeatureButton({
         featured ? "bg-primary text-background" : "bg-foreground/10 text-foreground/60 hover:text-foreground"
       }`}
     >
-      {featured ? "★ Destacado" : "☆ Destacar"}
+      <span className="inline-flex items-center gap-1">
+        <Star size={12} strokeWidth={2} fill={featured ? "currentColor" : "none"} aria-hidden />
+        {featured ? "Destacado" : "Destacar"}
+      </span>
     </button>
   );
 }

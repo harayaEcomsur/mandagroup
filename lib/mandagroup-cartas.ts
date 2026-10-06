@@ -38,7 +38,12 @@ export const CARTAS: Carta[] = [
 // menú en Fudo (externo, lo administra el restaurante).
 export const QR_MENU_LINKS = [
   { name: "Carbon", logo: "/clients/mandagroup/logo-carbon.webp", href: "/carta2026.pdf" },
-  { name: "Costa Sushi", logo: "/clients/mandagroup/logo-costa-sushi.webp", href: "https://menu.fu.do/costarestobar/qr-menu" },
+  {
+    name: "Costa Sushi",
+    logo: "/clients/mandagroup/logo-costa-sushi.webp",
+    href: "https://menu.fu.do/costarestobar/qr-menu",
+    external: "menu.fu.do",
+  },
 ] as const;
 
 // Selector de /carta: las 3 cartas al mismo nivel, cada una diciendo CÓMO se
