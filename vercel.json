@@ -7,6 +7,10 @@
     {
       "path": "/api/privacidad/purgar",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/vesti",
+      "schedule": "0 13 * * 2,4"
     }
   ]
 }

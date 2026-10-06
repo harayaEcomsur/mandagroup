@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // /carbon NO está acá: hay QR de mesa apuntando a mandagroup.cl/carbon —
+  // ahora es una página propia con la carta (app/carbon).
   // URLs del WordPress anterior de mandagroup.cl (listas por RRPP, puerta,
   // embajadores, reservas, carrito de tickets…): ya no se usan, pero pueden
   // estar indexadas o en links viejos — 301 a la home en vez de un 404 al
@@ -7,7 +9,7 @@ const nextConfig = {
   async redirects() {
     const legacy = [
       "rolo", "renato", "matias", "asistentes", "listas", "confirmo", "puerta", "puerta2",
-      "embajadores", "reservas", "test-reservas", "carbon", "carbonreserva", "carbonreserva1",
+      "embajadores", "reservas", "test-reservas", "carbonreserva", "carbonreserva1",
       "sample-page", "tickets-cart", "tickets-payment", "tickets-order-confirmation",
       "tickets-order-details", "tickets-process-payment", "tickets-ipn-payment",
     ];

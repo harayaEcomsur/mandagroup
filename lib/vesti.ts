@@ -198,6 +198,8 @@ async function fetchVenueEvents(venue: EventVenue): Promise<VestiEvent[] | null>
 // Próximos eventos de las 3 cuentas, ordenados por fecha. Si Vesti no
 // responde, la función cacheada lanza (así un fallo momentáneo NO queda
 // guardado 15 min como "no hay eventos") y el wrapper devuelve [].
+export const VESTI_CACHE_TAG = "vesti-events";
+
 const cachedVestiEvents = unstable_cache(
   async (): Promise<VestiEvent[]> => {
     const all = await Promise.all((Object.keys(VESTI_COMPANIES) as EventVenue[]).map(fetchVenueEvents));
@@ -205,7 +207,7 @@ const cachedVestiEvents = unstable_cache(
     return (all as VestiEvent[][]).flat().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   },
   ["vesti-events-v4"],
-  { revalidate: 900 }
+  { revalidate: 900, tags: [VESTI_CACHE_TAG] }
 );
 
 export async function listVestiEvents(): Promise<VestiEvent[]> {
