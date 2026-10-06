@@ -48,8 +48,8 @@ export const clientConfig = defineClientConfig({
   // asistente/SEO, aunque el hero visual de la home no los renderice literal.
   hero: {
     title: "Gastronomía, música y fiesta bajo un mismo grupo",
-    subtitle: "Manda Reñaca y Manda Viña del Mar — reserva tu mesa o compra tu entrada directo por WhatsApp.",
-    ctaLabel: "Reservar por WhatsApp",
+    subtitle: "Manda Reñaca y Manda Viña del Mar: entradas en Vesti; reservas de mesa en Reñaca por WhatsApp y en Viña por Instagram.",
+    ctaLabel: "Reservar mesa",
     ctaHref: "#contacto",
   },
 
@@ -81,9 +81,12 @@ export const clientConfig = defineClientConfig({
 
   chat: {
     businessDescription:
-      "Manda Group opera 2 locales nocturnos: Manda Reñaca (Classic Social Lounge, Av. Borgoño 14.880, Reñaca) y Manda Viña del Mar (5 Norte 132, Viña del Mar). Costa Nights es la marca de fiestas del grupo. Te llamas Manda: eres la asistente virtual del grupo.",
+      "Manda Group opera 2 locales nocturnos: Manda Reñaca (Classic Social Lounge, Av. Borgoño 14.880, Reñaca) y Manda Viña del Mar (5 Norte 132, Viña del Mar). Costa Nights es la marca de fiestas del grupo. Reservas de mesa: Manda Reñaca por su WhatsApp de reservas; Manda Viña del Mar por ahora solo por Instagram (@mandavina.cl). El WhatsApp general (+56 9 3172 7237) es solo para consultas. Te llamas Manda: eres la asistente virtual del grupo.",
     qaPairs: [
-      { q: "¿Cómo reservo una mesa?", a: "Dime en qué local (Reñaca o Viña del Mar) y te paso el WhatsApp vigente para coordinar tu reserva." },
+      {
+        q: "¿Cómo reservo una mesa?",
+        a: "Manda Reñaca: por WhatsApp de reservas (te paso el link). Manda Viña del Mar: por ahora solo por Instagram, escribiendo a @mandavina.cl. El WhatsApp general es solo para consultas.",
+      },
       { q: "¿Cómo compro entradas?", a: "Te muestro los eventos activos de Costa Nights y, al elegir uno, te paso el link real de compra." },
       { q: "¿Dónde están ubicados?", a: "Manda Reñaca: Av. Borgoño 14.880, Reñaca. Manda Viña del Mar: 5 Norte 132, Viña del Mar." },
       {
@@ -107,14 +110,16 @@ export const clientConfig = defineClientConfig({
   instagramActionButtons: [
     { title: "Entradas Reñaca", url: "https://vesti.cl/company/manda-renaca", kind: "tickets-renaca" },
     { title: "Entradas Viña", url: "https://vesti.cl/company/manda-group-vina", kind: "tickets-vina" },
-    { title: "Reservar mesa", url: "https://wa.me/56990721033", kind: "reserva" },
+    // WhatsApp de reservas de Manda Reñaca (exclusivo de ese local).
+    { title: "Reservar Reñaca", url: "https://wa.me/56990721033", kind: "reserva" },
   ],
 
   // Mismos 3 links, mostrados como botones en el chat del sitio (ver ChatWidget).
   chatActionButtons: [
     { label: "Entradas Manda Reñaca", url: "https://vesti.cl/company/manda-renaca" },
     { label: "Entradas Manda Viña del Mar", url: "https://vesti.cl/company/manda-group-vina" },
-    { label: "Reservar mesa (WhatsApp)", url: "https://wa.me/56990721033" },
+    { label: "Reservar Manda Reñaca (WhatsApp)", url: "https://wa.me/56990721033" },
+    { label: "Reservar Manda Viña (Instagram)", url: "https://ig.me/m/mandavina.cl" },
   ],
 
   seo: {
@@ -122,7 +127,7 @@ export const clientConfig = defineClientConfig({
     // los clubes (Reñaca, Viña) y Costa Sushi (Valparaíso, Curauma).
     title: "Manda Group | Clubes y restaurantes en la Región de Valparaíso",
     description:
-      "Manda Reñaca y Manda Viña del Mar, fiestas Costa Nights, Costa Sushi en Valparaíso y Curauma, y Carbon. Entradas en Vesti y reservas por WhatsApp.",
+      "Manda Reñaca y Manda Viña del Mar, fiestas Costa Nights, Costa Sushi en Valparaíso y Curauma, y Carbon. Cartelera, entradas en Vesti y reservas de mesa.",
     ogImageUrl: "/clients/mandagroup/og-manda.jpg",
     businessType: "NightClub",
     keywords: [

@@ -4,10 +4,17 @@ import { clientConfig } from "@/config/client.config";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/mandagroup/Reveal";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
+import { getReservationNumber, listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
 import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
 import { vestiCompanyUrl } from "@/lib/vesti";
-import { BRANDS, SITE_FAQ, eventVenueLabel, type Brand } from "@/lib/mandagroup-brands";
+import {
+  BRANDS,
+  SITE_FAQ,
+  eventVenueLabel,
+  RESERVA_RENACA_WHATSAPP,
+  RESERVA_VINA_INSTAGRAM,
+  type Brand,
+} from "@/lib/mandagroup-brands";
 import { buildMandagroupJsonLd } from "@/lib/mandagroup-seo";
 import { pickHero, splitEvents } from "@/lib/mandagroup-hero";
 
@@ -52,11 +59,21 @@ function clp(n: number): string {
 // WhatsAppButton/ChatWidget y clientConfig como cualquier otro cliente.
 export async function MandagroupHome() {
   const { contact } = clientConfig;
-  const [events, feeds] = await Promise.all([
+  const [events, feeds, renacaPhone] = await Promise.all([
     listActiveEvents(),
     Promise.all(BRANDS.map((b) => getAccountMedia(process.env[b.tokenEnv], 6))),
+    getReservationNumber(),
   ]);
+  // contact.whatsapp = WhatsApp de CONSULTAS (respuestas automáticas), no de
+  // reservas. Reservas: Reñaca por su WhatsApp, Viña por Instagram.
   const centralWa = contact.whatsapp ? buildWhatsAppLink(contact.whatsapp, contact.whatsappPrefilledMessage) : null;
+  const reservaLink: Record<string, { href: string; via: string }> = {
+    renaca: {
+      href: buildWhatsAppLink(renacaPhone ?? RESERVA_RENACA_WHATSAPP, "Hola! Quiero reservar mesa en Manda Reñaca"),
+      via: "Por WhatsApp de reservas",
+    },
+    vina: { href: RESERVA_VINA_INSTAGRAM.url, via: `Por Instagram, @${RESERVA_VINA_INSTAGRAM.handle}` },
+  };
 
   // Sin feed de Instagram, un club cae al flyer de su próxima fecha (imagen
   // real y actual) antes que a la foto fija o al logo.
@@ -122,14 +139,12 @@ export async function MandagroupHome() {
                   <ArrowUpRight size={16} strokeWidth={2} />
                 </span>
               </a>
-              {centralWa && (
-                <a
-                  href={centralWa}
-                  className="text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
-                >
-                  Reservar mesa por WhatsApp
-                </a>
-              )}
+              <a
+                href="#contacto"
+                className="text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
+              >
+                Reservar mesa
+              </a>
             </div>
           </Reveal>
 
@@ -470,7 +485,8 @@ export async function MandagroupHome() {
         </Container>
       </section>
 
-      {/* Contacto: una sola vía clara (WhatsApp) + dónde están los clubes. */}
+      {/* Contacto: cada club reserva por su canal (Reñaca WhatsApp, Viña
+          Instagram); el WhatsApp general queda solo para consultas. */}
       <section id="contacto" className="scroll-mt-24 border-t border-foreground/10 py-24 sm:py-32">
         <Container className="grid gap-14 lg:grid-cols-12">
           <Reveal className="lg:col-span-6">
@@ -478,14 +494,15 @@ export async function MandagroupHome() {
               Reservas, listas y eventos privados.
             </h2>
             <p className="mt-5 max-w-[46ch] text-foreground/60">
-              Te respondemos por WhatsApp, por Instagram o en el chat de esta página.
+              Cada club reserva por su propio canal. Para cualquier otra consulta, escríbenos por WhatsApp o en el
+              chat de esta página.
             </p>
             {centralWa && (
               <a
                 href={centralWa}
                 className="group mt-10 inline-flex items-center gap-3 rounded-full bg-primary py-2 pl-6 pr-2 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
               >
-                Escribir por WhatsApp
+                Consultas por WhatsApp
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
                   <ArrowUpRight size={16} strokeWidth={2} />
                 </span>
@@ -497,12 +514,26 @@ export async function MandagroupHome() {
               <Reveal key={b.key} delay={i * 80} className="rounded-2xl bg-foreground/[0.04] p-6 ring-1 ring-foreground/10">
                 <p className="font-heading text-lg font-semibold text-foreground">{b.name}</p>
                 <p className="mt-1 text-sm text-foreground/60">{b.address}</p>
+                {reservaLink[b.key] && (
+                  <div className="mt-5">
+                    <a
+                      href={reservaLink[b.key].href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.08] px-4 py-2.5 text-sm font-semibold text-foreground ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-primary hover:text-background active:scale-[0.98]"
+                    >
+                      Reservar
+                      <ArrowUpRight size={15} strokeWidth={2} aria-hidden />
+                    </a>
+                    <p className="mt-2 text-xs text-foreground/50">{reservaLink[b.key].via}</p>
+                  </div>
+                )}
                 {b.maps && (
                   <a
                     href={b.maps}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
+                    className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
                   >
                     <MapPin size={15} strokeWidth={2} />
                     Cómo llegar

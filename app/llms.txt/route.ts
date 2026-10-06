@@ -1,6 +1,6 @@
 import { clientConfig } from "@/config/client.config";
 import { listActiveEvents } from "@/lib/mandagroup-store";
-import { BRANDS, SITE_FAQ, eventVenueLabel } from "@/lib/mandagroup-brands";
+import { BRANDS, SITE_FAQ, eventVenueLabel, RESERVA_RENACA_WHATSAPP, RESERVA_VINA_INSTAGRAM } from "@/lib/mandagroup-brands";
 
 // /llms.txt (llmstxt.org): resumen en Markdown para asistentes de IA
 // (ChatGPT, Claude, Perplexity) — qué es Manda Group, sus marcas, dónde
@@ -39,7 +39,9 @@ export async function GET() {
     "## Enlaces",
     "",
     `- [Sitio](${base}/): cartelera, marcas y contacto`,
-    clientConfig.contact.whatsapp ? `- [WhatsApp de reservas](https://wa.me/${clientConfig.contact.whatsapp})` : "",
+    `- [Reservas Manda Reñaca (WhatsApp)](https://wa.me/${RESERVA_RENACA_WHATSAPP})`,
+    `- [Reservas Manda Viña del Mar (Instagram)](${RESERVA_VINA_INSTAGRAM.url})`,
+    clientConfig.contact.whatsapp ? `- [WhatsApp de consultas](https://wa.me/${clientConfig.contact.whatsapp})` : "",
     `- [Política de privacidad](${base}/privacidad)`,
   ];
 

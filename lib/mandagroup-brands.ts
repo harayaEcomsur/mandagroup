@@ -61,6 +61,15 @@ export const VENUE_LOCALITY: Record<"renaca" | "vina", string> = {
   vina: "Viña del Mar",
 };
 
+// Canales de reserva (confirmados por el cliente, oct. 2026):
+// - Manda Reñaca: WhatsApp de reservas, SOLO para Reñaca. El número vigente se
+//   edita en /eventos/admin; este es el respaldo si el panel no tiene uno.
+// - Manda Viña del Mar: por ahora solo por Instagram (DM a @mandavina.cl).
+// El WhatsApp general del config (contact.whatsapp, +56 9 3172 7237) es para
+// CONSULTAS y tiene respuestas automáticas: no se ofrece para reservar.
+export const RESERVA_RENACA_WHATSAPP = "56990721033";
+export const RESERVA_VINA_INSTAGRAM = { handle: "mandavina.cl", url: "https://ig.me/m/mandavina.cl" } as const;
+
 // Dónde ocurre un evento, como se le muestra a la gente: el local, o
 // "Costa Nights · <recinto>" para las fiestas de Costa Eventos.
 export const EVENT_VENUE_LABEL = {
@@ -89,7 +98,7 @@ export const SITE_FAQ = [
   },
   {
     q: "¿Cómo reservo una mesa en Manda Reñaca o Manda Viña del Mar?",
-    a: "Las reservas de mesa y listas se coordinan por WhatsApp. Escríbenos indicando el local y la fecha, y te confirmamos disponibilidad.",
+    a: "Manda Reñaca: por WhatsApp al +56 9 9072 1033, indicando fecha y cantidad de personas. Manda Viña del Mar: por mensaje directo en Instagram a @mandavina.cl.",
   },
   {
     q: "¿Dónde están Manda Reñaca y Manda Viña del Mar?",

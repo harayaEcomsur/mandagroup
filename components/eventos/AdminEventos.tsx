@@ -185,10 +185,11 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
 
       {/* Número de reservas */}
       <section className="rounded-2xl border border-foreground/10 p-6">
-        <h2 className="font-heading text-lg font-semibold text-foreground">WhatsApp de reservas</h2>
+        <h2 className="font-heading text-lg font-semibold text-foreground">WhatsApp de reservas — Manda Reñaca</h2>
         <p className="mt-1 text-sm text-foreground/60">
-          El asistente entrega este número cuando alguien quiere reservar mesa/lista — cámbialo cuando cambie el
-          anfitrión o el número de turno, sin depender de nadie más.
+          Solo para Manda Reñaca: el asistente y el sitio entregan este número cuando alguien quiere reservar mesa
+          o lista en Reñaca (Manda Viña reserva por Instagram, @mandavina.cl). Cámbialo cuando cambie el anfitrión o
+          el número de turno. Si queda vacío se usa +56 9 9072 1033.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <input

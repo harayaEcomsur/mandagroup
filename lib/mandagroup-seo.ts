@@ -1,6 +1,14 @@
 import { clientConfig } from "@/config/client.config";
 import type { MandagroupEvent } from "@/lib/mandagroup-store";
-import { BRANDS, SITE_FAQ, VENUE_LOCALITY, EVENT_VENUE_LABEL, eventVenueLabel } from "@/lib/mandagroup-brands";
+import {
+  BRANDS,
+  SITE_FAQ,
+  VENUE_LOCALITY,
+  EVENT_VENUE_LABEL,
+  RESERVA_RENACA_WHATSAPP,
+  RESERVA_VINA_INSTAGRAM,
+  eventVenueLabel,
+} from "@/lib/mandagroup-brands";
 
 // JSON-LD de la home de Manda Group, en un solo @graph:
 // - Organization (el holding) con sus marcas y cuentas oficiales (sameAs)
@@ -31,6 +39,9 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
       image: `${base}${b.fallbackImage ?? b.logo}`,
       sameAs: [`https://www.instagram.com/${b.handle}/`],
       parentOrganization: { "@id": orgId },
+      // Reservas: Reñaca por su WhatsApp, Viña por Instagram.
+      ...(b.key === "renaca" ? { acceptsReservations: true, telephone: `+${RESERVA_RENACA_WHATSAPP}` } : {}),
+      ...(b.key === "vina" ? { acceptsReservations: RESERVA_VINA_INSTAGRAM.url } : {}),
       ...(isClub && b.address
         ? {
             address: {
@@ -119,7 +130,8 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
           ? {
               contactPoint: {
                 "@type": "ContactPoint",
-                contactType: "reservations",
+                // WhatsApp general = consultas (las reservas van por cada club).
+                contactType: "customer service",
                 telephone: `+${clientConfig.contact.whatsapp}`,
                 availableLanguage: "es",
               },

@@ -30,9 +30,13 @@ function toolActionButtons(parts: ToolPart[]): { label: string; url: string }[] 
       }
     }
     if (part.type === "tool-derivar_reserva") {
-      const out = part.output as { local?: string; whatsapp_link?: string } | undefined;
+      const out = part.output as { local?: string; whatsapp_link?: string; instagram_link?: string } | undefined;
       if (out?.whatsapp_link) {
         buttons.push({ label: out.local ? `Reservar mesa — ${out.local}` : "Reservar mesa", url: out.whatsapp_link });
+      }
+      // Manda Viña reserva solo por Instagram (DM a @mandavina.cl).
+      if (out?.instagram_link) {
+        buttons.push({ label: out.local ? `Reservar por Instagram — ${out.local}` : "Reservar por Instagram", url: out.instagram_link });
       }
     }
   }

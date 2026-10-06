@@ -3,7 +3,7 @@ import { z } from "zod";
 import { clientConfig } from "@/config/client.config";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { getReservationNumber, listActiveEvents, logDerivation, type Canal, type EventVenue, type InstagramScope } from "@/lib/mandagroup-store";
-import { eventVenueLabel } from "@/lib/mandagroup-brands";
+import { eventVenueLabel, RESERVA_RENACA_WHATSAPP, RESERVA_VINA_INSTAGRAM } from "@/lib/mandagroup-brands";
 
 // Tools de derivación del módulo "eventos" (reemplazo de ManyChat): el
 // asistente nunca inventa un número ni un link — siempre los lee en vivo desde
@@ -117,22 +117,31 @@ export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?:
 
   tools.derivar_reserva = tool({
     description:
-      "Entrega el WhatsApp vigente para coordinar una reserva de mesa/lista en un local. Llamar cuando el cliente pida reservar (no comprar entrada).",
+      "Entrega el canal real para reservar mesa/lista en un local: Manda Reñaca → su WhatsApp de reservas; Manda Viña del Mar → por ahora solo por Instagram (@mandavina.cl). Llamar cuando el cliente pida reservar (no comprar entrada). Nunca ofrezcas el WhatsApp de consultas para reservar.",
     inputSchema: z.object({
       venue: z.enum(["renaca", "vina"]).describe("En qué local quiere reservar."),
     }),
     execute: async ({ venue }) => {
       if (allowedVenues && !allowedVenues.includes(venue)) {
-        return { error: "Las reservas de ese local no se coordinan por este canal — ofrece el WhatsApp general o la cuenta de Instagram de ese local." };
-      }
-      const phone = await getReservationNumber();
-      if (!phone) {
-        return { error: "Aún no hay un número de reservas configurado — dile al cliente que un anfitrión lo contactará a la brevedad." };
+        return { error: "Las reservas de ese local no se coordinan por este canal — ofrece la cuenta de Instagram de ese local." };
       }
       logDerivation({ canal, tipo: "reserva", venue, userMessage });
+      if (venue === "vina") {
+        return {
+          local: VENUE_LABEL.vina,
+          canal_reserva: "instagram",
+          instagram_link: RESERVA_VINA_INSTAGRAM.url,
+          nota:
+            canal === "instagram"
+              ? "Las reservas de Manda Viña se coordinan por Instagram. Si esta conversación es con @mandavina.cl, pídele que escriba aquí mismo fecha, cantidad de personas y nombre para la reserva; si es otra cuenta, entrégale el link de @mandavina.cl."
+              : "Las reservas de Manda Viña se coordinan solo por Instagram: entrégale el link para escribirle a @mandavina.cl.",
+        };
+      }
+      const phone = (await getReservationNumber()) ?? RESERVA_RENACA_WHATSAPP;
       return {
-        local: VENUE_LABEL[venue],
-        whatsapp_link: buildWhatsAppLink(phone, `Hola! Quiero reservar en ${VENUE_LABEL[venue]}`),
+        local: VENUE_LABEL.renaca,
+        canal_reserva: "whatsapp",
+        whatsapp_link: buildWhatsAppLink(phone, `Hola! Quiero reservar en ${VENUE_LABEL.renaca}`),
       };
     },
   });

@@ -215,7 +215,9 @@ function filterButtonsByScope(
   if (!buttons?.length) return [];
   if (!scope) return buttons;
   return buttons.filter((b) => {
-    if (b.kind === "reserva") return scope.allowReservations;
+    // El botón de reserva es el WhatsApp de Manda Reñaca: solo tiene sentido en
+    // cuentas que atienden Reñaca (Viña reserva por el mismo Instagram).
+    if (b.kind === "reserva") return scope.allowReservations && scope.venues.includes("renaca");
     if (b.kind === "tickets-renaca") return scope.venues.includes("renaca");
     if (b.kind === "tickets-vina") return scope.venues.includes("vina");
     return true;
