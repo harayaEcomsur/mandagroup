@@ -26,8 +26,16 @@ export const CARTAS: Carta[] = [
     key: "carbon",
     name: "Carta Carbon",
     description: "Carnes y parrilla de Carbon.",
-    logos: [{ src: "/clients/mandagroup/logo-carbon.webp", alt: "Carbon", light: true }],
+    logos: [{ src: "/clients/mandagroup/logo-carbon.webp", alt: "Carbon" }],
     pdf: "/carta2026.pdf",
     pages: [1, 2, 3, 4, 5].map((n) => ({ src: `/cartas/carbon-${n}.webp`, width: 1200, height: 1552 })),
   },
 ];
+
+// Las dos opciones de la página /carbon, tal como estaban en el sitio
+// anterior (destinos de los QR de mesa): Carbon → su PDF, Costa Sushi → su
+// menú en Fudo (externo, lo administra el restaurante).
+export const QR_MENU_LINKS = [
+  { name: "Carbon", logo: "/clients/mandagroup/logo-carbon.webp", href: "/carta2026.pdf" },
+  { name: "Costa Sushi", logo: "/clients/mandagroup/logo-costa-sushi.webp", href: "https://menu.fu.do/costarestobar/qr-menu" },
+] as const;

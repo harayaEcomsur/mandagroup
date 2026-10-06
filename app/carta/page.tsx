@@ -3,11 +3,11 @@ import { clientConfig } from "@/config/client.config";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CartaView } from "@/components/mandagroup/CartaView";
-import { CARTAS } from "@/lib/mandagroup-cartas";
+import { CARTAS, QR_MENU_LINKS } from "@/lib/mandagroup-cartas";
 
 export const metadata: Metadata = {
   title: "Cartas | Manda Group",
-  description: "Carta de Manda y carta de Carbon: tablas, quesadillas, carnes y parrilla.",
+  description: "Cartas de Manda, Carbon y Costa Sushi.",
   alternates: { canonical: "/carta" },
 };
 
@@ -24,6 +24,15 @@ export default function CartaPage() {
                 {c.name}
               </a>
             ))}
+            {/* Costa Sushi tiene su carta en Fudo (la administra el local). */}
+            <a
+              href={QR_MENU_LINKS[1].href}
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground/70 hover:text-primary"
+            >
+              Carta Costa Sushi ↗
+            </a>
           </nav>
           <div className="mt-12 flex flex-col gap-20">
             {CARTAS.map((c, i) => (
