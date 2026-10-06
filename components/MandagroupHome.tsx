@@ -36,6 +36,11 @@ function startTime(e: MandagroupEvent): string | null {
   });
 }
 
+// "2026-10-31" → "31 de octubre" (eventos de varios días, ej. Cyber Days).
+function untilDate(ymd: string): string {
+  return new Date(ymd + "T12:00:00").toLocaleDateString("es-CL", { day: "numeric", month: "long" });
+}
+
 function clp(n: number): string {
   return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
 }
@@ -173,7 +178,8 @@ export async function MandagroupHome() {
                 Próximas fiestas
               </h2>
               <p className="mt-3 max-w-[52ch] text-foreground/60">
-                Manda Reñaca, Manda Viña del Mar y las fiestas Costa Nights. Las entradas se compran en Vesti.
+                Manda Reñaca, Manda Viña del Mar, las fiestas Costa Nights y los shows de Eventos &amp; Stand Up. Las
+                entradas se compran en Vesti.
               </p>
             </div>
             <div className="flex gap-5 text-sm font-semibold">
@@ -185,6 +191,9 @@ export async function MandagroupHome() {
               </a>
               <a href={vestiCompanyUrl("costa")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
                 Vesti Costa Nights
+              </a>
+              <a href={vestiCompanyUrl("standup")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
+                Vesti Stand Up
               </a>
             </div>
           </Reveal>
@@ -240,7 +249,10 @@ export async function MandagroupHome() {
                         {e.title}
                       </h3>
                       <p className="mt-1 text-xs text-foreground/50">
-                        {[time && `${time} h`, e.soldOut ? "Agotado" : e.lowestPrice ? `Desde ${clp(e.lowestPrice)}` : null]
+                        {[
+                          e.lastDate && e.lastDate !== e.eventDate ? `Hasta el ${untilDate(e.lastDate)}` : time && `${time} h`,
+                          e.soldOut ? "Agotado" : e.lowestPrice ? `Desde ${clp(e.lowestPrice)}` : null,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>

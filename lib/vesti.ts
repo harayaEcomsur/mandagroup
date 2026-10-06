@@ -15,12 +15,13 @@ import type { EventVenue } from "@/lib/mandagroup-store";
 // No es una API documentada: si Vesti la cambia, esto devuelve [] (nunca
 // rompe la página) y el sitio sigue mostrando los eventos cargados a mano.
 
-// Las 3 cuentas de Manda en Vesti: los 2 locales y Costa Eventos (la
-// productora de las fiestas Costa Nights, en recintos externos).
+// Las cuentas del grupo en Vesti: los 2 locales, Costa Eventos (fiestas Costa
+// Nights en recintos externos) y Eventos & Stand Up (humor y promociones).
 const VESTI_COMPANIES: Record<EventVenue, string> = {
   renaca: "manda-renaca",
   vina: "manda-group-vina",
   costa: "costa-eventos",
+  standup: "eventos-y-stand-up",
 };
 
 export interface VestiTicket {
@@ -36,6 +37,7 @@ export interface VestiEvent {
   startsAt: string; // ISO UTC, tal cual lo entrega Vesti
   endsAt: string | null;
   eventDate: string; // "YYYY-MM-DD" en hora de Chile (la noche del evento)
+  lastDate: string; // "YYYY-MM-DD" en hora de Chile del día en que termina (= eventDate si dura una noche)
   imageUrl: string | null;
   url: string;
   // Precio más bajo de una entrada pagada y disponible (las cortesías de $0
@@ -177,6 +179,13 @@ async function fetchVenueEvents(venue: EventVenue): Promise<VestiEvent[] | null>
         startsAt: e.dateIni,
         endsAt: d?.dateEnd ?? null,
         eventDate: chileDate(e.dateIni),
+        // Una fiesta termina de madrugada del día siguiente: eso sigue siendo
+        // "la noche del evento". Solo cuenta como varios días si termina más
+        // de 18 h después de empezar (ej. una promoción de una semana).
+        lastDate:
+          d?.dateEnd && Date.parse(d.dateEnd) - Date.parse(e.dateIni) > 18 * 3600 * 1000
+            ? chileDate(d.dateEnd)
+            : chileDate(e.dateIni),
         imageUrl: e.images?.[0] ?? null,
         url: `https://www.vesti.cl/events/${e.slug}`,
         lowestPrice: paid.length ? Math.min(...paid) : null,
@@ -206,7 +215,7 @@ const cachedVestiEvents = unstable_cache(
     if (all.some((list) => list === null)) throw new Error("Vesti no respondió");
     return (all as VestiEvent[][]).flat().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   },
-  ["vesti-events-v4"],
+  ["vesti-events-v5"],
   { revalidate: 900, tags: [VESTI_CACHE_TAG] }
 );
 

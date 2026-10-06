@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 
 type Venue = "renaca" | "vina";
 // Eventos importados también pueden ser de Costa Nights (Costa Eventos).
-type EventVenue = Venue | "costa";
+type EventVenue = Venue | "costa" | "standup";
 
 interface MandagroupEvent {
   id: string;
@@ -79,6 +79,7 @@ const VENUE_LABEL: Record<EventVenue, string> = {
   renaca: "Manda Reñaca",
   vina: "Manda Viña del Mar",
   costa: "Costa Nights",
+  standup: "Eventos & Stand Up",
 };
 
 // Cuentas reales de Instagram de este cliente (mismos IDs que
@@ -263,7 +264,7 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
       <section className="rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Eventos desde Vesti</h2>
         <p className="mt-1 text-sm text-foreground/60">
-          Todo evento futuro publicado en Vesti por Manda Reñaca, Manda Viña o Costa Eventos (Costa Nights) aparece
+          Todo evento futuro publicado en Vesti por Manda Reñaca, Manda Viña, Costa Eventos (Costa Nights) o Eventos & Stand Up aparece
           solo en el sitio y lo ofrece el asistente. Se actualiza cada 15 minutos. Oculta los que no quieras mostrar.
         </p>
         <div className="mt-4 space-y-3">

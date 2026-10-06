@@ -10,11 +10,13 @@ import { listVestiEvents, type VestiTicket } from "@/lib/vesti";
 // en memoria (demos/desarrollo local).
 
 export type Venue = "renaca" | "vina";
-// Dónde ocurre un evento: los 2 locales, o "costa" = fiestas Costa Nights de
-// la productora Costa Eventos, en recintos externos (Club Naval, Club
-// Español…). Solo existe para eventos importados de Vesti; reservas, scopes
-// de Instagram y eventos manuales siguen siendo de un local (Venue).
-export type EventVenue = Venue | "costa";
+// Dónde ocurre un evento: los 2 locales, o una de las otras cuentas de Vesti
+// del grupo — "costa" = fiestas Costa Nights (productora Costa Eventos, en
+// recintos externos: Club Naval, Club Español…) y "standup" = Eventos & Stand
+// Up (shows de humor y promociones como Cyber Days). Solo existen para eventos
+// importados de Vesti; reservas, scopes de Instagram y eventos manuales siguen
+// siendo de un local (Venue).
+export type EventVenue = Venue | "costa" | "standup";
 export type DerivationTipo = "reserva" | "invitacion";
 export type Canal = "web" | "whatsapp" | "instagram";
 
@@ -36,6 +38,7 @@ export interface MandagroupEvent {
   // dirección real, tipos de entrada, agotado/reprogramado.
   place?: string | null;
   endsAt?: string | null;
+  lastDate?: string; // "YYYY-MM-DD" del último día (eventos de varios días)
   address?: string | null;
   comuna?: string | null;
   geo?: { lat: number; lng: number } | null;
@@ -201,7 +204,9 @@ export async function listActiveEvents(): Promise<MandagroupEvent[]> {
   const active = manual.filter((e) => e.active && e.eventDate >= today).map((e) => ({ ...e, source: "manual" as const }));
   const manualUrls = new Set(active.map((e) => e.ticketUrl.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")));
   const imported: MandagroupEvent[] = vesti
-    .filter((v) => v.eventDate >= today && !hidden.includes(v.vestiId))
+    // Visible hasta que TERMINA (no hasta que empieza): una promoción de
+    // varios días, como Cyber Days, sigue en la cartelera mientras dure.
+    .filter((v) => v.lastDate >= today && !hidden.includes(v.vestiId))
     .filter((v) => !manualUrls.has(v.url.replace(/^https?:\/\/(www\.)?/, "")))
     .map((v) => ({
       id: `vesti:${v.vestiId}`,
@@ -217,6 +222,7 @@ export async function listActiveEvents(): Promise<MandagroupEvent[]> {
       startsAt: v.startsAt,
       place: v.place,
       endsAt: v.endsAt,
+      lastDate: v.lastDate,
       address: v.address,
       comuna: v.comuna,
       geo: v.geo,

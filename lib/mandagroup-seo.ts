@@ -1,6 +1,6 @@
 import { clientConfig } from "@/config/client.config";
 import type { MandagroupEvent } from "@/lib/mandagroup-store";
-import { BRANDS, SITE_FAQ, VENUE_LOCALITY, eventVenueLabel } from "@/lib/mandagroup-brands";
+import { BRANDS, SITE_FAQ, VENUE_LOCALITY, EVENT_VENUE_LABEL, eventVenueLabel } from "@/lib/mandagroup-brands";
 
 // JSON-LD de la home de Manda Group, en un solo @graph:
 // - Organization (el holding) con sus marcas y cuentas oficiales (sameAs)
@@ -52,7 +52,7 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
   });
 
   const eventNodes = events.map((e) => {
-    const venue = e.venue === "costa" ? null : BRANDS.find((b) => b.key === e.venue)!;
+    const venue = e.venue === "renaca" || e.venue === "vina" ? BRANDS.find((b) => b.key === e.venue)! : null;
     const where = eventVenueLabel(e);
     // Dirección: la real que publica Vesti para el evento (con coordenadas);
     // si no viene, la del local; las de Costa Nights sin dato quedan a nivel
@@ -72,7 +72,7 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
       description: `${e.title} en ${where}. Entradas a la venta en Vesti.`,
       location: {
         "@type": "Place",
-        name: e.place ?? (venue ? venue.name : "Costa Nights"),
+        name: e.place ?? (venue ? venue.name : EVENT_VENUE_LABEL[e.venue]),
         address: {
           "@type": "PostalAddress",
           ...(streetAddress ? { streetAddress } : {}),
@@ -82,7 +82,7 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
         },
         ...(e.geo ? { geo: { "@type": "GeoCoordinates", latitude: e.geo.lat, longitude: e.geo.lng } } : {}),
       },
-      organizer: { "@type": "Organization", name: venue ? venue.name : "Costa Nights", url: base },
+      organizer: { "@type": "Organization", name: venue ? venue.name : EVENT_VENUE_LABEL[e.venue], url: base },
       // Un Offer por tipo de entrada (cortesía, early bird, general…) con su
       // precio y si está agotada, tal como los publica Vesti.
       offers: e.tickets?.length

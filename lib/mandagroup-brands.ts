@@ -67,10 +67,19 @@ export const EVENT_VENUE_LABEL = {
   renaca: "Manda Reñaca",
   vina: "Manda Viña del Mar",
   costa: "Costa Nights",
+  standup: "Eventos & Stand Up",
 } as const;
 
-export function eventVenueLabel(e: { venue: keyof typeof EVENT_VENUE_LABEL; place?: string | null }): string {
-  return e.venue === "costa" && e.place ? `Costa Nights · ${e.place}` : EVENT_VENUE_LABEL[e.venue];
+export function eventVenueLabel(e: {
+  venue: keyof typeof EVENT_VENUE_LABEL;
+  place?: string | null;
+  comuna?: string | null;
+}): string {
+  if (e.venue === "renaca" || e.venue === "vina") return EVENT_VENUE_LABEL[e.venue];
+  // Cuentas fuera de los locales: el recinto si Vesti lo trae (o el nombre lo
+  // dice), si no la comuna.
+  const where = e.place ?? e.comuna;
+  return where ? `${EVENT_VENUE_LABEL[e.venue]} · ${where}` : EVENT_VENUE_LABEL[e.venue];
 }
 
 export const SITE_FAQ = [
