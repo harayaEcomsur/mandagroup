@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Star } from "lucide-react";
+import type { Carta, Local } from "@/lib/mandagroup-catalog";
+import { AdminLocales } from "@/components/eventos/AdminLocales";
+import { AdminCartas } from "@/components/eventos/AdminCartas";
 
 type Venue = "renaca" | "vina";
 // Eventos importados también pueden ser de Costa Nights (Costa Eventos).
@@ -75,6 +78,8 @@ interface State {
   vestiEvents: VestiEvent[];
   hiddenVesti: string[];
   featuredIds: string[]; // id manual o "vesti:<vestiId>"
+  locales: Local[];
+  cartas: Carta[];
 }
 
 const VENUE_LABEL: Record<EventVenue, string> = {
@@ -135,7 +140,6 @@ const UNRESTRICTED: InstagramScope = { enabled: true, venues: ["renaca", "vina"]
 export function AdminEventos({ adminKey }: { adminKey: string | null }) {
   const [state, setState] = useState<State | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [phoneDraft, setPhoneDraft] = useState("");
   const [newEvent, setNewEvent] = useState({ venue: "renaca" as Venue, title: "", ticketUrl: "", eventDate: "" });
   const [saving, setSaving] = useState(false);
 
@@ -149,7 +153,6 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
     }
     const data = (await res.json()) as State;
     setState(data);
-    setPhoneDraft(data.reservasWhatsapp ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminKey]);
 
@@ -183,30 +186,19 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
     <div className="space-y-10">
       {error && <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 
-      {/* Número de reservas */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
-        <h2 className="font-heading text-lg font-semibold text-foreground">WhatsApp de reservas — Manda Reñaca</h2>
-        <p className="mt-1 text-sm text-foreground/60">
-          Solo para Manda Reñaca: el asistente y el sitio entregan este número cuando alguien quiere reservar mesa
-          o lista en Reñaca (Manda Viña reserva por Instagram, @mandavina.cl). Cámbialo cuando cambie el anfitrión o
-          el número de turno. Si queda vacío se usa +56 9 9072 1033.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <input
-            value={phoneDraft}
-            onChange={(e) => setPhoneDraft(e.target.value)}
-            placeholder="56912345678"
-            className="w-56 rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm"
-          />
-          <button
-            disabled={saving || !phoneDraft.trim()}
-            onClick={() => patch({ action: "setReservationNumber", phone: phoneDraft.trim() })}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          >
-            Guardar
-          </button>
-        </div>
-      </section>
+      {/* Locales con su canal de reservas (reemplaza el antiguo "WhatsApp de
+          reservas" único) y cartas de cada marca. */}
+      <AdminLocales
+        locales={state.locales}
+        saving={saving}
+        onSave={(locales) => patch({ action: "saveLocales", locales })}
+      />
+      <AdminCartas
+        cartas={state.cartas}
+        adminKey={adminKey}
+        saving={saving}
+        onSave={(cartas) => patch({ action: "saveCartas", cartas })}
+      />
 
       {/* Eventos activos */}
       <section className="rounded-2xl border border-foreground/10 p-6">

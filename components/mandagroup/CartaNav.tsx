@@ -10,10 +10,10 @@ import { ArrowUpRight } from "lucide-react";
 // externo.
 export function CartaNav({
   sections,
-  external,
+  externals,
 }: {
   sections: { id: string; label: string }[];
-  external: { label: string; href: string };
+  externals: { label: string; href: string }[];
 }) {
   const [active, setActive] = useState<string | null>(null);
 
@@ -51,16 +51,19 @@ export function CartaNav({
             {s.label}
           </a>
         ))}
-        <a
-          href={external.href}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-foreground/70 ring-1 ring-foreground/15 transition-colors duration-300 hover:text-primary hover:ring-primary/50"
-        >
-          {external.label}
-          <ArrowUpRight size={14} strokeWidth={2} aria-hidden />
-          <span className="sr-only">(sitio externo)</span>
-        </a>
+        {externals.map((x) => (
+          <a
+            key={x.href}
+            href={x.href}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-foreground/70 ring-1 ring-foreground/15 transition-colors duration-300 hover:text-primary hover:ring-primary/50"
+          >
+            {x.label}
+            <ArrowUpRight size={14} strokeWidth={2} aria-hidden />
+            <span className="sr-only">(sitio externo)</span>
+          </a>
+        ))}
       </div>
     </nav>
   );

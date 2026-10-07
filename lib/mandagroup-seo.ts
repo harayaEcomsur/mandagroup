@@ -1,12 +1,11 @@
 import { clientConfig } from "@/config/client.config";
+import { reservationLink, type Local } from "@/lib/mandagroup-catalog";
 import type { MandagroupEvent } from "@/lib/mandagroup-store";
 import {
   BRANDS,
-  SITE_FAQ,
+  buildFaq,
   VENUE_LOCALITY,
   EVENT_VENUE_LABEL,
-  RESERVA_RENACA_WHATSAPP,
-  RESERVA_VINA_INSTAGRAM,
   eventVenueLabel,
 } from "@/lib/mandagroup-brands";
 
@@ -23,7 +22,15 @@ function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
 
-export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
+function reservationProps(l: Local | undefined) {
+  const link = l ? reservationLink(l) : null;
+  if (!l || !link) return {};
+  return l.reservation.type === "whatsapp"
+    ? { acceptsReservations: true, telephone: `+${l.reservation.phone}` }
+    : { acceptsReservations: link.href };
+}
+
+export function buildMandagroupJsonLd(events: MandagroupEvent[], locales: Local[]) {
   const base = siteUrl();
   const orgId = `${base}/#organization`;
   const venueId = (key: string) => `${base}/#${key}`;
@@ -40,8 +47,8 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
       sameAs: [`https://www.instagram.com/${b.handle}/`],
       parentOrganization: { "@id": orgId },
       // Reservas: Reñaca por su WhatsApp, Viña por Instagram.
-      ...(b.key === "renaca" ? { acceptsReservations: true, telephone: `+${RESERVA_RENACA_WHATSAPP}` } : {}),
-      ...(b.key === "vina" ? { acceptsReservations: RESERVA_VINA_INSTAGRAM.url } : {}),
+      // Reservas: canal vigente del local en el panel (los 2 clubes).
+      ...reservationProps(locales.find((l) => l.id === `manda-${b.key}`)),
       ...(isClub && b.address
         ? {
             address: {
@@ -143,7 +150,7 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[]) {
       ...eventNodes,
       {
         "@type": "FAQPage",
-        mainEntity: SITE_FAQ.map((f) => ({
+        mainEntity: buildFaq(locales).map((f) => ({
           "@type": "Question",
           name: f.q,
           acceptedAnswer: { "@type": "Answer", text: f.a },

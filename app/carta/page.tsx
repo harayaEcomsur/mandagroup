@@ -6,7 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CartaView } from "@/components/mandagroup/CartaView";
 import { CartaNav } from "@/components/mandagroup/CartaNav";
 import { Reveal } from "@/components/mandagroup/Reveal";
-import { CARTAS, CARTA_OPTIONS, type CartaOption } from "@/lib/mandagroup-cartas";
+import { BRAND_LOGO, hostOf, listCartas } from "@/lib/mandagroup-catalog";
 
 export const metadata: Metadata = {
   title: "Cartas | Manda Group",
@@ -14,14 +14,18 @@ export const metadata: Metadata = {
   alternates: { canonical: "/carta" },
 };
 
-// Arriba, las 3 cartas como opciones del mismo peso, cada una explicando cómo
-// se abre (aquí mismo / PDF / sitio externo). Abajo, las que se leen en esta
-// página. Antes Costa Sushi era un link suelto en una fila y parecía que no
-// tenía carta.
-// La carta externa (Costa Sushi, en Fudo) también va en la barra fija.
-const costaSushi = CARTA_OPTIONS.find((o): o is Extract<CartaOption, { kind: "external" }> => o.kind === "external")!;
+// Las cartas se administran en /eventos/admin (archivo PDF o link externo);
+// el panel regenera esta página al guardar. Respaldo: cada 10 min.
+export const revalidate = 600;
 
-export default function CartaPage() {
+// Arriba, todas las cartas como opciones del mismo peso, cada una diciendo
+// cómo se abre (aquí mismo / PDF / sitio externo). Abajo, las que se leen en
+// esta página (las de archivo).
+export default async function CartaPage() {
+  const cartas = (await listCartas()).filter((c) => c.showOnSite);
+  const inline = cartas.filter((c) => c.source.type === "file");
+  const external = cartas.filter((c) => c.source.type === "url");
+
   return (
     <>
       <Header config={clientConfig} />
@@ -33,25 +37,25 @@ export default function CartaPage() {
           </Reveal>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {CARTA_OPTIONS.map((o, i) => (
+            {cartas.map((c, i) => (
               <Reveal
-                key={o.key}
+                key={c.id}
                 as="article"
                 mode="load"
-                delay={120 + i * 90}
+                delay={120 + Math.min(i, 5) * 70}
                 className="flex flex-col rounded-2xl bg-foreground/[0.05] p-6 ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:ring-primary/40"
               >
                 <div className="flex items-center gap-4">
                   {/* eslint-disable-next-line @next/next/no-img-element -- logo local chico */}
-                  <img src={o.logo} alt="" className="h-16 w-16 shrink-0 rounded-full bg-background object-contain p-2" />
-                  <h2 className="font-heading text-2xl font-semibold text-foreground">{o.name}</h2>
+                  <img src={BRAND_LOGO[c.brand]} alt="" className="h-16 w-16 shrink-0 rounded-full bg-background object-contain p-2" />
+                  <h2 className="font-heading text-xl font-semibold leading-snug text-foreground">{c.title}</h2>
                 </div>
-                <p className="mt-4 text-sm leading-relaxed text-foreground/60">{o.blurb}</p>
+                {c.description && <p className="mt-4 text-sm leading-relaxed text-foreground/60">{c.description}</p>}
 
-                {o.kind === "inline" ? (
+                {c.source.type === "file" ? (
                   <>
                     <a
-                      href={`#${o.key}`}
+                      href={`#${c.id}`}
                       className="group mt-6 inline-flex items-center justify-between gap-3 rounded-full bg-primary py-1.5 pl-5 pr-1.5 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       Ver carta aquí
@@ -59,35 +63,33 @@ export default function CartaPage() {
                         <ArrowDown size={14} strokeWidth={2} aria-hidden />
                       </span>
                     </a>
-                    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-foreground/60">
-                      <a href={o.pdf.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary">
-                        <FileText size={13} strokeWidth={2} />
-                        Descargar PDF ({o.pdf.size})
-                      </a>
-                      {o.extra?.map((x) => (
-                        <a key={x.href} href={x.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-primary">
-                          <FileText size={13} strokeWidth={2} />
-                          {x.label}
-                        </a>
-                      ))}
-                    </div>
+                    <a
+                      href={c.source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 inline-flex items-center gap-1.5 text-xs text-foreground/60 hover:text-primary"
+                    >
+                      <FileText size={13} strokeWidth={2} aria-hidden />
+                      Descargar PDF
+                      {c.source.sizeBytes ? ` (${(c.source.sizeBytes / 1048576).toFixed(1).replace(".", ",")} MB)` : ""}
+                    </a>
                   </>
                 ) : (
                   <>
                     <a
-                      href={o.href}
+                      href={c.source.url}
                       target="_blank"
                       rel="noreferrer"
                       className="group mt-6 inline-flex items-center justify-between gap-3 rounded-full bg-primary py-1.5 pl-5 pr-1.5 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       Abrir menú online
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-y-0.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
                         <ArrowUpRight size={14} strokeWidth={2} aria-hidden />
                       </span>
                     </a>
                     <p className="mt-4 inline-flex items-center gap-1.5 text-xs text-foreground/60">
-                      <ExternalLink size={13} strokeWidth={2} />
-                      Se abre en {o.host}, en otra pestaña
+                      <ExternalLink size={13} strokeWidth={2} aria-hidden />
+                      Se abre en {hostOf(c.source.url)}, en otra pestaña
                     </p>
                   </>
                 )}
@@ -95,17 +97,19 @@ export default function CartaPage() {
             ))}
           </div>
 
-          <div className="mx-auto mt-20 max-w-3xl">
-            <CartaNav
-              sections={CARTAS.map((c) => ({ id: c.key, label: c.name.replace("Carta ", "") }))}
-              external={{ label: costaSushi.name, href: costaSushi.href }}
-            />
-            <div className="mt-10 flex flex-col gap-20">
-              {CARTAS.map((c) => (
-                <CartaView key={c.key} carta={c} />
-              ))}
+          {inline.length > 0 && (
+            <div className="mx-auto mt-20 max-w-3xl">
+              <CartaNav
+                sections={inline.map((c) => ({ id: c.id, label: c.title.replace(/^Carta /, "") }))}
+                externals={external.map((c) => ({ label: c.title.replace(/^Carta /, ""), href: c.source.url }))}
+              />
+              <div className="mt-10 flex flex-col gap-20">
+                {inline.map((c) => (
+                  <CartaView key={c.id} carta={c} />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
       <Footer config={clientConfig} />

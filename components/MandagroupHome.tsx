@@ -4,15 +4,14 @@ import { clientConfig } from "@/config/client.config";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/mandagroup/Reveal";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { getReservationNumber, listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
+import { listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
+import { listLocales, reservationLink } from "@/lib/mandagroup-catalog";
 import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
 import { vestiCompanyUrl } from "@/lib/vesti";
 import {
   BRANDS,
-  SITE_FAQ,
+  buildFaq,
   eventVenueLabel,
-  RESERVA_RENACA_WHATSAPP,
-  RESERVA_VINA_INSTAGRAM,
   type Brand,
 } from "@/lib/mandagroup-brands";
 import { buildMandagroupJsonLd } from "@/lib/mandagroup-seo";
@@ -59,21 +58,18 @@ function clp(n: number): string {
 // WhatsAppButton/ChatWidget y clientConfig como cualquier otro cliente.
 export async function MandagroupHome() {
   const { contact } = clientConfig;
-  const [events, feeds, renacaPhone] = await Promise.all([
+  const [events, feeds, allLocales] = await Promise.all([
     listActiveEvents(),
     Promise.all(BRANDS.map((b) => getAccountMedia(process.env[b.tokenEnv], 6))),
-    getReservationNumber(),
+    listLocales(),
   ]);
   // contact.whatsapp = WhatsApp de CONSULTAS (respuestas automáticas), no de
   // reservas. Reservas: Reñaca por su WhatsApp, Viña por Instagram.
   const centralWa = contact.whatsapp ? buildWhatsAppLink(contact.whatsapp, contact.whatsappPrefilledMessage) : null;
-  const reservaLink: Record<string, { href: string; via: string }> = {
-    renaca: {
-      href: buildWhatsAppLink(renacaPhone ?? RESERVA_RENACA_WHATSAPP, "Hola! Quiero reservar mesa en Manda Reñaca"),
-      via: "Por WhatsApp de reservas",
-    },
-    vina: { href: RESERVA_VINA_INSTAGRAM.url, via: `Por Instagram, @${RESERVA_VINA_INSTAGRAM.handle}` },
-  };
+  // Locales visibles (editables en el panel), cada uno con su canal de reserva.
+  // Solo los que tienen algo que ofrecer (reserva o dirección): un local recién
+  // agregado sin datos no aparece como tarjeta vacía.
+  const locales = allLocales.filter((l) => l.showOnSite && (reservationLink(l) || l.address));
 
   // Sin feed de Instagram, un club cae al flyer de su próxima fecha (imagen
   // real y actual) antes que a la foto fija o al logo.
@@ -93,7 +89,8 @@ export async function MandagroupHome() {
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .slice(0, 8);
 
-  const jsonLd = buildMandagroupJsonLd(events);
+  const jsonLd = buildMandagroupJsonLd(events, allLocales);
+  const faq = buildFaq(allLocales);
 
   return (
     <>
@@ -475,7 +472,7 @@ export async function MandagroupHome() {
             </h2>
           </Reveal>
           <dl className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:col-span-8">
-            {SITE_FAQ.map((f, i) => (
+            {faq.map((f, i) => (
               <Reveal key={f.q} delay={(i % 2) * 80}>
                 <dt className="font-heading text-lg font-semibold leading-snug text-foreground">{f.q}</dt>
                 <dd className="mt-3 text-sm leading-relaxed text-foreground/65">{f.a}</dd>
@@ -485,8 +482,8 @@ export async function MandagroupHome() {
         </Container>
       </section>
 
-      {/* Contacto: cada club reserva por su canal (Reñaca WhatsApp, Viña
-          Instagram); el WhatsApp general queda solo para consultas. */}
+      {/* Contacto: cada local reserva por su propio canal (editable en el
+          panel); el WhatsApp general queda solo para consultas. */}
       <section id="contacto" className="scroll-mt-24 border-t border-foreground/10 py-24 sm:py-32">
         <Container className="grid gap-14 lg:grid-cols-12">
           <Reveal className="lg:col-span-6">
@@ -494,7 +491,7 @@ export async function MandagroupHome() {
               Reservas, listas y eventos privados.
             </h2>
             <p className="mt-5 max-w-[46ch] text-foreground/60">
-              Cada club reserva por su propio canal. Para cualquier otra consulta, escríbenos por WhatsApp o en el
+              Cada local reserva por su propio canal. Para cualquier otra consulta, escríbenos por WhatsApp o en el
               chat de esta página.
             </p>
             {centralWa && (
@@ -510,37 +507,45 @@ export async function MandagroupHome() {
             )}
           </Reveal>
           <div className="grid content-start items-start gap-4 sm:grid-cols-2 lg:col-span-6">
-            {BRANDS.filter((b) => b.address).map((b, i) => (
-              <Reveal key={b.key} delay={i * 80} className="rounded-2xl bg-foreground/[0.04] p-6 ring-1 ring-foreground/10">
-                <p className="font-heading text-lg font-semibold text-foreground">{b.name}</p>
-                <p className="mt-1 text-sm text-foreground/60">{b.address}</p>
-                {reservaLink[b.key] && (
-                  <div className="mt-5">
+            {locales.map((l, i) => {
+              const reserva = reservationLink(l);
+              return (
+                <Reveal key={l.id} delay={(i % 2) * 80} className="rounded-2xl bg-foreground/[0.04] p-6 ring-1 ring-foreground/10">
+                  <p className="font-heading text-lg font-semibold text-foreground">{l.name}</p>
+                  {l.address && <p className="mt-1 text-sm text-foreground/60">{l.address}</p>}
+                  {reserva ? (
+                    <div className="mt-5">
+                      <a
+                        href={reserva.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.08] px-4 py-2.5 text-sm font-semibold text-foreground ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-primary hover:text-background active:scale-[0.98]"
+                      >
+                        Reservar
+                        <ArrowUpRight size={15} strokeWidth={2} aria-hidden />
+                      </a>
+                      <p className="mt-2 text-xs text-foreground/50">{reserva.via}</p>
+                    </div>
+                  ) : (
+                    <p className="mt-5 text-xs text-foreground/50">Sin reservas online. Escríbenos por consultas.</p>
+                  )}
+                  {(l.mapsUrl || l.address) && (
                     <a
-                      href={reservaLink[b.key].href}
+                      href={
+                        l.mapsUrl ??
+                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${l.name} ${l.address}`)}`
+                      }
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.08] px-4 py-2.5 text-sm font-semibold text-foreground ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-primary hover:text-background active:scale-[0.98]"
+                      className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
                     >
-                      Reservar
-                      <ArrowUpRight size={15} strokeWidth={2} aria-hidden />
+                      <MapPin size={15} strokeWidth={2} />
+                      Cómo llegar
                     </a>
-                    <p className="mt-2 text-xs text-foreground/50">{reservaLink[b.key].via}</p>
-                  </div>
-                )}
-                {b.maps && (
-                  <a
-                    href={b.maps}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
-                  >
-                    <MapPin size={15} strokeWidth={2} />
-                    Cómo llegar
-                  </a>
-                )}
-              </Reveal>
-            ))}
+                  )}
+                </Reveal>
+              );
+            })}
           </div>
         </Container>
       </section>

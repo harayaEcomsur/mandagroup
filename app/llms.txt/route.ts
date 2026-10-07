@@ -1,6 +1,7 @@
 import { clientConfig } from "@/config/client.config";
 import { listActiveEvents } from "@/lib/mandagroup-store";
-import { BRANDS, SITE_FAQ, eventVenueLabel, RESERVA_RENACA_WHATSAPP, RESERVA_VINA_INSTAGRAM } from "@/lib/mandagroup-brands";
+import { BRANDS, buildFaq, eventVenueLabel } from "@/lib/mandagroup-brands";
+import { listCartas, listLocales, reservationLink } from "@/lib/mandagroup-catalog";
 
 // /llms.txt (llmstxt.org): resumen en Markdown para asistentes de IA
 // (ChatGPT, Claude, Perplexity) — qué es Manda Group, sus marcas, dónde
@@ -11,7 +12,7 @@ export const revalidate = 900;
 
 export async function GET() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  const events = await listActiveEvents();
+  const [events, locales, cartas] = await Promise.all([listActiveEvents(), listLocales(), listCartas()]);
 
   const lines = [
     "# Manda Group",
@@ -35,12 +36,17 @@ export async function GET() {
     "",
     "## Preguntas frecuentes",
     "",
-    ...SITE_FAQ.flatMap((f) => [`### ${f.q}`, "", f.a, ""]),
+    ...buildFaq(locales).flatMap((f) => [`### ${f.q}`, "", f.a, ""]),
+    "## Cartas",
+    "",
+    ...cartas.filter((c) => c.showOnSite).map((c) => `- [${c.title}](${/^https?:/.test(c.source.url) ? c.source.url : base + c.source.url})`),
+    "",
     "## Enlaces",
     "",
     `- [Sitio](${base}/): cartelera, marcas y contacto`,
-    `- [Reservas Manda Reñaca (WhatsApp)](https://wa.me/${RESERVA_RENACA_WHATSAPP})`,
-    `- [Reservas Manda Viña del Mar (Instagram)](${RESERVA_VINA_INSTAGRAM.url})`,
+    ...locales
+      .filter((l) => l.showOnSite && reservationLink(l))
+      .map((l) => `- [Reservas ${l.name}](${reservationLink(l)!.href})`),
     clientConfig.contact.whatsapp ? `- [WhatsApp de consultas](https://wa.me/${clientConfig.contact.whatsapp})` : "",
     `- [Política de privacidad](${base}/privacidad)`,
   ];

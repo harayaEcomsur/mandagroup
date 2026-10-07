@@ -1,3 +1,4 @@
+import type { Local } from "@/lib/mandagroup-catalog";
 // Marcas de Manda Group: fuente única para la home (bento + feed de
 // Instagram), el JSON-LD y /llms.txt — así el nombre, la dirección y la
 // cuenta de cada marca no se desalinean entre lo que ve la gente y lo que
@@ -61,14 +62,6 @@ export const VENUE_LOCALITY: Record<"renaca" | "vina", string> = {
   vina: "Viña del Mar",
 };
 
-// Canales de reserva (confirmados por el cliente, oct. 2026):
-// - Manda Reñaca: WhatsApp de reservas, SOLO para Reñaca. El número vigente se
-//   edita en /eventos/admin; este es el respaldo si el panel no tiene uno.
-// - Manda Viña del Mar: por ahora solo por Instagram (DM a @mandavina.cl).
-// El WhatsApp general del config (contact.whatsapp, +56 9 3172 7237) es para
-// CONSULTAS y tiene respuestas automáticas: no se ofrece para reservar.
-export const RESERVA_RENACA_WHATSAPP = "56990721033";
-export const RESERVA_VINA_INSTAGRAM = { handle: "mandavina.cl", url: "https://ig.me/m/mandavina.cl" } as const;
 
 // Dónde ocurre un evento, como se le muestra a la gente: el local, o
 // "Costa Nights · <recinto>" para las fiestas de Costa Eventos.
@@ -91,14 +84,10 @@ export function eventVenueLabel(e: {
   return where ? `${EVENT_VENUE_LABEL[e.venue]} · ${where}` : EVENT_VENUE_LABEL[e.venue];
 }
 
-export const SITE_FAQ = [
+const STATIC_FAQ = [
   {
     q: "¿Cómo compro entradas para las fiestas de Manda?",
     a: "Todas las entradas se venden en Vesti. En la cartelera de esta página cada fecha tiene su botón \"Comprar entrada\", que lleva directo a la venta. También puedes escribir \"ENTRADAS\" por DM a @mandavina.cl o @manda.chile y te enviamos el link.",
-  },
-  {
-    q: "¿Cómo reservo una mesa en Manda Reñaca o Manda Viña del Mar?",
-    a: "Manda Reñaca: por WhatsApp al +56 9 9072 1033, indicando fecha y cantidad de personas. Manda Viña del Mar: por mensaje directo en Instagram a @mandavina.cl.",
   },
   {
     q: "¿Dónde están Manda Reñaca y Manda Viña del Mar?",
@@ -117,3 +106,31 @@ export const SITE_FAQ = [
     a: "Manda Group reúne los clubes Manda Reñaca y Manda Viña del Mar, las fiestas Costa Nights, el restaurante Costa Sushi (con locales en Valparaíso y Curauma) y Carbon.",
   },
 ] as const;
+
+// Canales de reserva para mostrar en texto: "+56 9 9072 1033".
+function prettyPhone(digits: string): string {
+  const d = digits.replace(/\D/g, "");
+  return d.startsWith("569") && d.length === 11 ? `+56 9 ${d.slice(3, 7)} ${d.slice(7)}` : `+${d}`;
+}
+
+function reservationText(l: Local): string | null {
+  const r = l.reservation;
+  if (r.type === "whatsapp") return `${l.name}: por WhatsApp al ${prettyPhone(r.phone)}.`;
+  if (r.type === "instagram") return `${l.name}: por mensaje directo en Instagram a @${r.handle.replace(/^@/, "")}.`;
+  if (r.type === "url") return `${l.name}: en ${r.url}.`;
+  return null;
+}
+
+// Preguntas frecuentes de la home, el JSON-LD (FAQPage) y /llms.txt. La de
+// reservas se arma con los canales de cada local (editables en el panel),
+// así nunca dice un número viejo.
+export function buildFaq(locales: Local[]): { q: string; a: string }[] {
+  const lines = locales.filter((l) => l.showOnSite).map(reservationText).filter(Boolean) as string[];
+  const reservas = lines.length
+    ? {
+        q: "¿Cómo reservo una mesa?",
+        a: `Cada local reserva por su propio canal. ${lines.join(" ")} Indica fecha y cantidad de personas.`,
+      }
+    : null;
+  return [STATIC_FAQ[0], ...(reservas ? [reservas] : []), ...STATIC_FAQ.slice(1)];
+}

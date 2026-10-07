@@ -1,9 +1,9 @@
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 import { clientConfig } from "@/config/client.config";
-import { buildWhatsAppLink } from "@/lib/whatsapp";
-import { getReservationNumber, listActiveEvents, logDerivation, type Canal, type EventVenue, type InstagramScope } from "@/lib/mandagroup-store";
-import { eventVenueLabel, RESERVA_RENACA_WHATSAPP, RESERVA_VINA_INSTAGRAM } from "@/lib/mandagroup-brands";
+import { listActiveEvents, logDerivation, type Canal, type EventVenue, type InstagramScope } from "@/lib/mandagroup-store";
+import { eventVenueLabel } from "@/lib/mandagroup-brands";
+import { listLocales, reservationLink } from "@/lib/mandagroup-catalog";
 
 // Tools de derivación del módulo "eventos" (reemplazo de ManyChat): el
 // asistente nunca inventa un número ni un link — siempre los lee en vivo desde
@@ -11,7 +11,6 @@ import { eventVenueLabel, RESERVA_RENACA_WHATSAPP, RESERVA_VINA_INSTAGRAM } from
 // estadísticas del panel. `canal` lo fija cada webhook al construir el tool
 // set (ver app/api/whatsapp, app/api/instagram, app/api/chat).
 
-const VENUE_LABEL = { renaca: "Manda Reñaca", vina: "Manda Viña del Mar" } as const;
 
 // "viernes 16 de octubre" — para que el modelo no tenga que interpretar un
 // "YYYY-MM-DD" a ojo al hablarle al cliente.
@@ -32,6 +31,11 @@ function formatEventDate(iso: string): string {
 // evento fuera de scope (así el modelo ni se entera de que existe) y
 // derivar_reserva se omite por completo si allowReservations es false — no
 // basta con pedírselo en el prompt, un modelo "lite" puede igual ofrecerla.
+// "Viña del Mar" → "vina del mar" (sin tildes ni mayúsculas, para comparar).
+function normalize(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
 export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?: InstagramScope): ToolSet {
   if (!clientConfig.modules.eventos) return {};
 
@@ -117,32 +121,52 @@ export function buildMandagroupTools(canal: Canal, userMessage?: string, scope?:
 
   tools.derivar_reserva = tool({
     description:
-      "Entrega el canal real para reservar mesa/lista en un local: Manda Reñaca → su WhatsApp de reservas; Manda Viña del Mar → por ahora solo por Instagram (@mandavina.cl). Llamar cuando el cliente pida reservar (no comprar entrada). Nunca ofrezcas el WhatsApp de consultas para reservar.",
+      "Entrega el canal real para reservar mesa en un local del grupo (cada local tiene el suyo: WhatsApp de reservas, Instagram o un link; se administran en el panel). Llamar cuando el cliente pida reservar (no comprar entrada). Si no sabes en qué local, pregúntale. Nunca ofrezcas el WhatsApp de consultas para reservar.",
     inputSchema: z.object({
-      venue: z.enum(["renaca", "vina"]).describe("En qué local quiere reservar."),
+      local: z
+        .string()
+        .describe("Local donde quiere reservar, como lo dijo el cliente (ej. 'Manda Reñaca', 'Viña', 'Costa Sushi Curauma')."),
     }),
-    execute: async ({ venue }) => {
-      if (allowedVenues && !allowedVenues.includes(venue)) {
+    execute: async ({ local }) => {
+      const locales = (await listLocales()).filter((l) => l.showOnSite);
+      const q = normalize(local);
+      // Coincidencia por nombre o id; "reñaca" / "viña" a secas apuntan a Manda.
+      const match =
+        locales.find((l) => normalize(l.name) === q || l.id === q) ??
+        locales.find((l) => normalize(l.name).includes(q)) ??
+        locales.find((l) => l.brand === "manda" && q.split(" ").some((w) => w.length > 3 && normalize(l.name).includes(w)));
+      const opciones = locales.filter((l) => reservationLink(l)).map((l) => l.name);
+      if (!match) {
+        return { error: "No reconocí el local. Pregúntale cuál de estos prefiere.", locales_con_reserva: opciones };
+      }
+      const venue = match.id === "manda-renaca" ? "renaca" : match.id === "manda-vina" ? "vina" : undefined;
+      if (venue && allowedVenues && !allowedVenues.includes(venue)) {
         return { error: "Las reservas de ese local no se coordinan por este canal — ofrece la cuenta de Instagram de ese local." };
       }
+      const link = reservationLink(match);
       logDerivation({ canal, tipo: "reserva", venue, userMessage });
-      if (venue === "vina") {
+      if (!link) {
         return {
-          local: VENUE_LABEL.vina,
-          canal_reserva: "instagram",
-          instagram_link: RESERVA_VINA_INSTAGRAM.url,
-          nota:
-            canal === "instagram"
-              ? "Las reservas de Manda Viña se coordinan por Instagram. Si esta conversación es con @mandavina.cl, pídele que escriba aquí mismo fecha, cantidad de personas y nombre para la reserva; si es otra cuenta, entrégale el link de @mandavina.cl."
-              : "Las reservas de Manda Viña se coordinan solo por Instagram: entrégale el link para escribirle a @mandavina.cl.",
+          local: match.name,
+          error: "Este local no toma reservas online. Dile que puede escribir por el WhatsApp de consultas o acercarse al local.",
+          locales_con_reserva: opciones,
         };
       }
-      const phone = (await getReservationNumber()) ?? RESERVA_RENACA_WHATSAPP;
-      return {
-        local: VENUE_LABEL.renaca,
-        canal_reserva: "whatsapp",
-        whatsapp_link: buildWhatsAppLink(phone, `Hola! Quiero reservar en ${VENUE_LABEL.renaca}`),
-      };
+      if (match.reservation.type === "instagram") {
+        const handle = match.reservation.handle.replace(/^@/, "");
+        return {
+          local: match.name,
+          canal_reserva: "instagram",
+          instagram_link: link.href,
+          nota:
+            canal === "instagram"
+              ? `Las reservas de ${match.name} se coordinan por Instagram. Si esta conversación es con @${handle}, pídele que escriba aquí mismo fecha, cantidad de personas y nombre; si es otra cuenta, entrégale el link de @${handle}.`
+              : `Las reservas de ${match.name} se coordinan solo por Instagram: entrégale el link para escribirle a @${handle}.`,
+        };
+      }
+      return match.reservation.type === "whatsapp"
+        ? { local: match.name, canal_reserva: "whatsapp", whatsapp_link: link.href }
+        : { local: match.name, canal_reserva: "link", reserva_link: link.href };
     },
   });
 
