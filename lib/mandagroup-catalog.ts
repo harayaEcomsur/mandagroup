@@ -182,9 +182,9 @@ export const DEFAULT_CARTAS: Carta[] = [
     order: 3,
     updatedAt: T,
   },
-  // Cartas que solo existen para QR ya impresos: siguen mostrando su archivo
-  // de siempre (no aparecen en /carta) hasta que en el panel se les cambie el
-  // PDF o se asigne su URL a otra carta.
+  // Cartas que solo existen para QR ya impresos (estado inicial, igual que en
+  // el hosting anterior): siguen mostrando su archivo (no aparecen en /carta)
+  // hasta que se cambien, se reasignen o se borren en el panel.
   {
     id: "manda-bar-anterior",
     brand: "manda",
