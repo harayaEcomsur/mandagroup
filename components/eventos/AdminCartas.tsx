@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { ArrowDown, ArrowUp, ExternalLink, FileText, Plus, Trash2, Upload } from "lucide-react";
 import type { BrandKey, Carta } from "@/lib/mandagroup-catalog";
+import { LEGACY_QR } from "@/lib/mandagroup-legacy-qr";
 
 // Cartas de cada marca: un PDF (se sube directo a Vercel Blob) o un link
 // externo (ej. el menú de Costa Sushi en Fudo). Cada carta puede tener URLs de
@@ -216,7 +217,11 @@ function CartaRow({
             className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-red-400 hover:bg-red-500/10"
           >
             <Trash2 size={14} />
-            {confirmDelete ? "¿Eliminar? Confirmar" : "Eliminar"}
+            {confirmDelete
+              ? carta.aliases.some((a) => a in LEGACY_QR)
+                ? "¿Eliminar? Sus QR vuelven al archivo original"
+                : "¿Eliminar? Confirmar"
+              : "Eliminar"}
           </button>
         </div>
       </div>
@@ -259,6 +264,29 @@ export function AdminCartas({
         Sube el PDF o pega el link de cada carta. Al reemplazar un PDF, sus QR ya impresos muestran la versión nueva sin
         reimprimir nada.
       </p>
+
+      {/* QR ya impresos: siempre funcionan. Si ninguna carta los reclama, vuelven
+          a su archivo original (lib/mandagroup-legacy-qr.ts). */}
+      <div className="mt-5 rounded-xl bg-foreground/[0.03] p-4">
+        <p className="text-sm font-semibold text-foreground">QR impresos (siempre activos)</p>
+        <p className="mt-1 text-xs text-foreground/60">
+          Estas URLs ya están en QR impresos y nunca se rompen: se pueden asignar a otra carta, y si se la quitas a
+          todas, vuelven a su archivo original.
+        </p>
+        <ul className="mt-3 grid gap-1 text-xs sm:grid-cols-2">
+          {Object.keys(LEGACY_QR).map((url) => {
+            const owner = draft.find((c) => c.aliases.includes(url));
+            return (
+              <li key={url} className="flex gap-2">
+                <a href={url} target="_blank" rel="noreferrer" className="font-mono text-foreground hover:text-primary">
+                  {url}
+                </a>
+                <span className="text-foreground/50">→ {owner ? owner.title : "archivo original"}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className="mt-5 space-y-3">
         {draft.map((c, i) => (

@@ -139,8 +139,7 @@ export const DEFAULT_CARTAS: Carta[] = [
     },
     showOnSite: true,
     onCarbonPage: false,
-    // cartabarmanda.pdf era la carta anterior de Manda: su QR muestra la vigente.
-    aliases: ["/cmanda.pdf", "/cartabarmanda.pdf"],
+    aliases: ["/cmanda.pdf"],
     order: 0,
     updatedAt: T,
   },
@@ -156,8 +155,7 @@ export const DEFAULT_CARTAS: Carta[] = [
     },
     showOnSite: true,
     onCarbonPage: true,
-    // carta.pdf y bar.pdf eran versiones anteriores de la carta de Carbon.
-    aliases: ["/carta2026.pdf", "/carta.pdf", "/bar.pdf"],
+    aliases: ["/carta2026.pdf"],
     order: 1,
     updatedAt: T,
   },
@@ -184,6 +182,42 @@ export const DEFAULT_CARTAS: Carta[] = [
     order: 3,
     updatedAt: T,
   },
+  // Cartas que solo existen para QR ya impresos: siguen mostrando su archivo
+  // de siempre (no aparecen en /carta) hasta que en el panel se les cambie el
+  // PDF o se asigne su URL a otra carta.
+  {
+    id: "manda-bar-anterior",
+    brand: "manda",
+    title: "Carta bar Manda (QR cartabarmanda.pdf)",
+    source: { type: "file", url: archived("cartabarmanda.pdf") },
+    showOnSite: false,
+    onCarbonPage: false,
+    aliases: ["/cartabarmanda.pdf"],
+    order: 4,
+    updatedAt: T,
+  },
+  {
+    id: "carbon-carta-anterior",
+    brand: "carbon",
+    title: "Carta Carbon anterior (QR carta.pdf)",
+    source: { type: "file", url: archived("carta.pdf") },
+    showOnSite: false,
+    onCarbonPage: false,
+    aliases: ["/carta.pdf"],
+    order: 5,
+    updatedAt: T,
+  },
+  {
+    id: "carbon-bar-anterior",
+    brand: "carbon",
+    title: "Carta Carbon anterior (QR bar.pdf)",
+    source: { type: "file", url: archived("bar.pdf") },
+    showOnSite: false,
+    onCarbonPage: false,
+    aliases: ["/bar.pdf"],
+    order: 6,
+    updatedAt: T,
+  },
   {
     id: "costa",
     brand: "costa",
@@ -193,7 +227,7 @@ export const DEFAULT_CARTAS: Carta[] = [
     showOnSite: true,
     onCarbonPage: true,
     aliases: [],
-    order: 4,
+    order: 7,
     updatedAt: T,
   },
   {
@@ -204,7 +238,7 @@ export const DEFAULT_CARTAS: Carta[] = [
     showOnSite: true,
     onCarbonPage: false,
     aliases: ["/curauma.pdf"],
-    order: 5,
+    order: 8,
     updatedAt: T,
   },
 ];

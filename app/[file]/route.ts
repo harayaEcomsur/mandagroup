@@ -1,4 +1,5 @@
-import { findCartaByAlias } from "@/lib/mandagroup-catalog";
+import { findCartaByAlias, normalizeAlias } from "@/lib/mandagroup-catalog";
+import { LEGACY_QR } from "@/lib/mandagroup-legacy-qr";
 
 // URLs fijas de los QR ya impresos (/cmanda.pdf, /carta2026.pdf, /curauma.pdf…):
 // cada una está asociada a una carta del panel y redirige a su versión
@@ -10,8 +11,12 @@ import { findCartaByAlias } from "@/lib/mandagroup-catalog";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: { file: string } }) {
-  const carta = await findCartaByAlias(`/${params.file}`);
-  if (!carta) {
+  const path = `/${params.file}`;
+  const carta = await findCartaByAlias(path);
+  // QR impreso que ninguna carta reclama (se borró o se le quitó la URL en el
+  // panel): vuelve a su archivo original. Ver lib/mandagroup-legacy-qr.ts.
+  const destination = carta?.source.url || LEGACY_QR[normalizeAlias(path)];
+  if (!destination) {
     return new Response(
       '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Página no encontrada | Manda Group</title></head><body style="margin:0;min-height:100dvh;display:grid;place-items:center;background:#0B0B0D;color:#F2EFE9;font-family:system-ui,sans-serif;text-align:center"><main><h1 style="font-weight:600">Página no encontrada</h1><p><a href="/" style="color:#E0A83E">Ir a Manda Group</a> · <a href="/carta" style="color:#E0A83E">Ver cartas</a></p></main></body></html>',
       { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } }
@@ -21,6 +26,6 @@ export async function GET(_req: Request, { params }: { params: { file: string } 
   // redirect permanente quedaría guardado en el navegador de quien escaneó.
   return new Response(null, {
     status: 302,
-    headers: { Location: carta.source.url, "Cache-Control": "no-store" },
+    headers: { Location: destination, "Cache-Control": "no-store" },
   });
 }
