@@ -10,6 +10,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
+      // Las páginas de QR y los PDFs de cartas NO van acá a propósito: si se
+      // bloquea el rastreo, Google no ve su "noindex" (X-Robots-Tag en
+      // next.config) y podría listar la URL igual si alguien la enlaza.
       disallow: ["/api/", "/eventos/admin", "/agenda/admin", "/tienda/admin", "/inmobiliaria/admin", "/embed/", "/variantes"],
     },
     sitemap: `${base}/sitemap.xml`,

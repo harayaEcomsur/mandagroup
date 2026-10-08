@@ -6,6 +6,19 @@ const nextConfig = {
   // embajadores, reservas, carrito de tickets…): ya no se usan, pero pueden
   // estar indexadas o en links viejos — 301 a la home en vez de un 404 al
   // migrar el dominio a este proyecto.
+  // Cartas que solo se abren por QR o link directo (Carbon: precios distintos
+  // en español y en portugués para turistas): que ningún buscador las indexe
+  // aunque alguien publique el link. robots.txt solo pide no rastrear; esta
+  // cabecera impide además que aparezcan en resultados.
+  async headers() {
+    const noindex = [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
+    return [
+      { source: "/carbon", headers: noindex },
+      { source: "/carbont.html", headers: noindex },
+      { source: "/cartas/archivo/:path*", headers: noindex },
+      { source: "/:file*.pdf", headers: noindex },
+    ];
+  },
   async redirects() {
     const legacy = [
       "rolo", "renato", "matias", "asistentes", "listas", "confirmo", "puerta", "puerta2",

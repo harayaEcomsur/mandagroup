@@ -63,7 +63,11 @@ export interface Carta {
   title: string;
   description?: string;
   source: CartaSource;
-  showOnSite: boolean; // aparece en /carta
+  // Aparece en /carta (pública e indexable). Las cartas de Carbon van en
+  // false: la carta en portugués (turistas) incluye comisiones de agencias y
+  // tiene otros precios que la de español, así que ninguna de las dos debe
+  // estar a la vista — solo se abren desde su QR o su link directo.
+  showOnSite: boolean;
   onCarbonPage: boolean; // aparece en /carbon (QR de mesa de Carbon / Costa Sushi)
   // URLs fijas de QR ya impresos ("/cmanda.pdf"): siempre llevan a la versión
   // vigente de esta carta, sea archivo o link (ver app/[file]/route.ts).
@@ -153,7 +157,7 @@ export const DEFAULT_CARTAS: Carta[] = [
       url: archived("carta2026.pdf"),
       pages: [1, 2, 3, 4, 5].map((n) => ({ src: `/cartas/carbon-${n}.webp`, width: 1200, height: 1552 })),
     },
-    showOnSite: true,
+    showOnSite: false,
     onCarbonPage: true,
     aliases: ["/carta2026.pdf"],
     order: 1,
@@ -165,7 +169,7 @@ export const DEFAULT_CARTAS: Carta[] = [
     title: "Cardápio Carbon (português)",
     description: "Carta de Carbon para turistas, em português.",
     source: { type: "file", url: archived("portugues2.pdf") },
-    showOnSite: true,
+    showOnSite: false,
     onCarbonPage: false,
     aliases: ["/portugues2.pdf", "/portugues1.pdf"],
     order: 2,

@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: "Revisa nuestra carta | Carbon y Costa Sushi",
   description: "Carta de Carbon (carnes y parrilla) y carta de Costa Sushi.",
   alternates: { canonical: "/carbon" },
+  // Página de destino de los QR de mesa: no debe aparecer en buscadores
+  // (muestra la carta de Carbon, que no es pública; ver lib/mandagroup-catalog).
+  robots: { index: false, follow: false },
 };
 
 export const revalidate = 600;

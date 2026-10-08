@@ -198,7 +198,7 @@ function CartaRow({
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
         <label className="inline-flex items-center gap-2 text-foreground/70">
           <input type="checkbox" checked={carta.showOnSite} onChange={(e) => onChange({ showOnSite: e.target.checked })} />
-          Mostrar en /carta
+          Pública en /carta
         </label>
         <label className="inline-flex items-center gap-2 text-foreground/70">
           <input type="checkbox" checked={carta.onCarbonPage} onChange={(e) => onChange({ onCarbonPage: e.target.checked })} />
@@ -261,7 +261,8 @@ export function AdminCartas({
       <h2 className="font-heading text-lg font-semibold text-foreground">Cartas</h2>
       <p className="mt-1 text-sm text-foreground/60">
         Sube el PDF o pega el link de cada carta. Al reemplazar un PDF, sus QR ya impresos muestran la versión nueva sin
-        reimprimir nada.
+        reimprimir nada. Sin "Pública en /carta", la carta solo se abre desde su QR o link y no aparece en buscadores
+        (así están las de Carbon, por la diferencia de precios con la carta para turistas).
       </p>
 
       <div className="mt-5 space-y-3">
