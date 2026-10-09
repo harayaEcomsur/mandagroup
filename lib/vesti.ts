@@ -127,6 +127,15 @@ function gql<T>(query: string, variables: Record<string, unknown>): Promise<T | 
 // Respaldo cuando Vesti no trae el recinto como dato (pasa seguido en Costa
 // Eventos): viene como último tramo del nombre ("HALLOWEEN … / 31.10 / CLUB
 // NAVAL"). Se toma ese tramo si no es una fecha.
+// Locales del grupo que Vesti no nombra como recinto (place viene null y el
+// sitio mostraría solo la comuna): se reconocen por la dirección. Ej. el show
+// de Luis Jara en Carbón, vendido por la cuenta Eventos & Stand Up.
+const OWN_PLACES: { address: RegExp; place: string }[] = [{ address: /\bcentral\s+184\b/i, place: "Carbón, Reñaca" }];
+
+function placeFromAddress(address: string | null | undefined): string | null {
+  return (address && OWN_PLACES.find((p) => p.address.test(address))?.place) || null;
+}
+
 function placeFromName(name: string): string | null {
   const parts = name.split(" / ").map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return null;
@@ -192,7 +201,9 @@ async function fetchVenueEvents(venue: EventVenue): Promise<VestiEvent[] | null>
         tickets,
         soldOut: tickets.length > 0 && tickets.every((t) => t.soldOut),
         rescheduled: Boolean(d?.isRescheduled),
-        place: d?.place ? titleCase(d.place) : venue === "costa" ? placeFromName(name) : null,
+        place: d?.place
+          ? titleCase(d.place)
+          : placeFromAddress(d?.address?.address) ?? (venue === "costa" ? placeFromName(name) : null),
         address: showAddress ? d.address!.address : null,
         comuna: d?.comuna ?? null,
         geo:
@@ -215,7 +226,7 @@ const cachedVestiEvents = unstable_cache(
     if (all.some((list) => list === null)) throw new Error("Vesti no respondió");
     return (all as VestiEvent[][]).flat().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   },
-  ["vesti-events-v5"],
+  ["vesti-events-v6"],
   { revalidate: 900, tags: [VESTI_CACHE_TAG] }
 );
 
