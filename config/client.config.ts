@@ -124,10 +124,10 @@ export const clientConfig = defineClientConfig({
 
   seo: {
     // ~60 caracteres: marca + qué es + dónde. "Región de Valparaíso" cubre
-    // los clubes (Reñaca, Viña) y Costa Sushi (Valparaíso, Curauma).
+    // los clubes (Reñaca, Viña) y Costa Sushi (Reñaca, Valparaíso, Curauma).
     title: "Manda Group | Clubes y restaurantes en la Región de Valparaíso",
     description:
-      "Manda Reñaca y Manda Viña del Mar, fiestas Costa Nights, Costa Sushi en Valparaíso y Curauma, y Carbon. Cartelera, entradas en Vesti y reservas de mesa.",
+      "Manda Reñaca y Manda Viña del Mar, fiestas Costa Nights, Costa Sushi en Reñaca, Valparaíso y Curauma, y Carbón. Cartelera, entradas en Vesti y reservas de mesa.",
     ogImageUrl: "/clients/mandagroup/og-manda.jpg",
     businessType: "NightClub",
     keywords: [

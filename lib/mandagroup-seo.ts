@@ -115,7 +115,7 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[], locales: Local[
           }
         : {}),
       ...(b.key === "costa"
-        ? { servesCuisine: "Sushi", areaServed: ["Valparaíso", "Curauma"] }
+        ? { servesCuisine: "Sushi", areaServed: ["Reñaca", "Valparaíso", "Curauma"] }
         : b.key === "carbon"
           ? { servesCuisine: "Parrilla" }
           : {}),

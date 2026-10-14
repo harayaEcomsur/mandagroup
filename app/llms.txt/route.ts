@@ -20,7 +20,7 @@ export async function GET() {
     "",
     `> ${clientConfig.seo.description}`,
     "",
-    "Manda Group es un grupo de vida nocturna y gastronomía en la costa de la Región de Valparaíso, Chile: clubes en Reñaca y Viña del Mar, y restaurantes en Valparaíso y Curauma.",
+    "Manda Group es un grupo de vida nocturna y gastronomía en la costa de la Región de Valparaíso, Chile: clubes en Reñaca y Viña del Mar, y restaurantes en Reñaca, Valparaíso y Curauma.",
     "",
     "## Marcas",
     "",

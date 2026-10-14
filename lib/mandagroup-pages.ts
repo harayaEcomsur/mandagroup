@@ -69,7 +69,7 @@ export const BRAND_PAGES: BrandPage[] = [
       },
       {
         q: "¿Qué tipo de comida tiene Carbón?",
-        a: "Carbón es un restaurante de carnes y parrilla, con coctelería. Es parte de Manda Group, el mismo grupo de Manda Reñaca, Manda Viña del Mar y Costa Sushi.",
+        a: "Carbón es un restaurante de carnes y parrilla, con coctelería. Es parte de Manda Group y comparte local con Costa Sushi Reñaca, en Av. Central 184.",
       },
       {
         q: "¿Dónde veo la carta de Carbón?",
@@ -90,24 +90,24 @@ export const BRAND_PAGES: BrandPage[] = [
     catalogBrand: "costa",
     schemaType: "Restaurant",
     name: "Costa Sushi",
-    alternateName: ["Costa Sushi Restobar", "Costa Sushi Valparaíso", "Costa Sushi Curauma"],
+    alternateName: ["Costa Sushi Restobar", "Costa Sushi Reñaca", "Costa Sushi Valparaíso", "Costa Sushi Curauma"],
     cuisine: ["Sushi", "Japonesa"],
-    title: "Costa Sushi | Sushi en Valparaíso y Curauma, local y delivery",
+    title: "Costa Sushi | Sushi en Reñaca, Valparaíso y Curauma",
     description:
-      "Costa Sushi, el sushi bar de Manda Group, con locales en Valparaíso y Curauma. Atención en el local y delivery. Revisa la carta online y cómo llegar.",
-    h1: "Costa Sushi, sushi en Valparaíso y Curauma",
-    eyebrow: "Sushi bar · Valparaíso y Curauma",
+      "Costa Sushi, el sushi bar de Manda Group, con locales en Reñaca, Valparaíso y Curauma. Atención en el local y delivery. Revisa la carta online y cómo llegar.",
+    h1: "Costa Sushi, sushi en Reñaca, Valparaíso y Curauma",
+    eyebrow: "Sushi bar · Reñaca, Valparaíso y Curauma",
     intro:
-      "Costa Sushi es el sushi bar de Manda Group, con locales en Valparaíso y en Curauma. Atiende en el local y con delivery, y su carta completa está en el menú online. Es parte del mismo grupo de Carbón y de los clubes Manda Reñaca y Manda Viña del Mar.",
+      "Costa Sushi es el sushi bar de Manda Group, con tres locales: Reñaca (Av. Central 184, junto a Carbón), Valparaíso y Curauma. Atiende en el local y con delivery, y su carta completa está en el menú online.",
     highlights: [
-      { title: "Dos locales", body: "Uno en Valparaíso y otro en Curauma, para comer en el local." },
-      { title: "Delivery", body: "Pide tu sushi a domicilio desde cualquiera de los dos locales." },
+      { title: "Tres locales", body: "Reñaca, Valparaíso y Curauma, para comer en el local." },
+      { title: "Delivery", body: "También puedes pedir tu sushi a domicilio." },
       { title: "Carta online", body: "La carta completa y actualizada, siempre a un clic." },
     ],
     faq: [
       {
         q: "¿Dónde hay un Costa Sushi?",
-        a: "Costa Sushi tiene dos locales: uno en Valparaíso y otro en Curauma. En esta página está la dirección de cada uno y el link para llegar.",
+        a: "Costa Sushi tiene tres locales: en Reñaca (Av. Central 184, el mismo lugar que Carbón), en Valparaíso y en Curauma. En esta página está la dirección de cada uno y el link para llegar.",
       },
       {
         q: "¿Costa Sushi tiene delivery?",

@@ -103,12 +103,23 @@ export const DEFAULT_LOCALES: Local[] = [
     order: 1,
   },
   {
+    // Mismo local físico que Carbón (Av. Central 184).
+    id: "costa-renaca",
+    brand: "costa",
+    name: "Costa Sushi Reñaca",
+    address: "Av. Central 184, Reñaca",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Costa+Sushi+Av.+Central+184+Re%C3%B1aca",
+    reservation: { type: "none" },
+    showOnSite: true,
+    order: 2,
+  },
+  {
     id: "costa-valparaiso",
     brand: "costa",
     name: "Costa Sushi Valparaíso",
     reservation: { type: "none" },
     showOnSite: true,
-    order: 2,
+    order: 3,
   },
   {
     id: "costa-curauma",
@@ -116,7 +127,7 @@ export const DEFAULT_LOCALES: Local[] = [
     name: "Costa Sushi Curauma",
     reservation: { type: "none" },
     showOnSite: true,
-    order: 3,
+    order: 4,
   },
   {
     id: "carbon",
@@ -126,7 +137,7 @@ export const DEFAULT_LOCALES: Local[] = [
     mapsUrl: "https://www.google.com/maps/search/?api=1&query=Carb%C3%B3n+Av.+Central+184+Re%C3%B1aca",
     reservation: { type: "none" },
     showOnSite: true,
-    order: 4,
+    order: 5,
   },
 ];
 

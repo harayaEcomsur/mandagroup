@@ -96,7 +96,7 @@ export async function MandagroupHome() {
               Comer, brindar y bailar en la costa de Valparaíso.
             </h1>
             <p className="mt-6 max-w-[48ch] text-lg leading-relaxed text-foreground/70">
-              Clubes en Reñaca y Viña del Mar, las fiestas Costa Nights, Costa Sushi en Valparaíso y Curauma, y
+              Clubes en Reñaca y Viña del Mar, las fiestas Costa Nights, Costa Sushi en Reñaca, Valparaíso y Curauma, y
               Carbon.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">

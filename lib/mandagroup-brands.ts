@@ -33,7 +33,7 @@ export const BRANDS = [
   {
     key: "costa",
     name: "Costa Sushi",
-    kind: "Sushi bar y delivery en Valparaíso y Curauma",
+    kind: "Sushi bar y delivery en Reñaca, Valparaíso y Curauma",
     address: null,
     maps: null,
     logo: "/clients/mandagroup/logo-costa-sushi.webp",
@@ -95,7 +95,7 @@ const STATIC_FAQ = [
   },
   {
     q: "¿Dónde está Costa Sushi?",
-    a: "Costa Sushi tiene locales en Valparaíso y en Curauma, con atención en el local y delivery.",
+    a: "Costa Sushi tiene tres locales: en Reñaca (Av. Central 184, el mismo lugar que Carbón), en Valparaíso y en Curauma, con atención en el local y delivery.",
   },
   {
     q: "¿Cuál es el dress code?",
@@ -103,7 +103,7 @@ const STATIC_FAQ = [
   },
   {
     q: "¿Qué marcas forman parte de Manda Group?",
-    a: "Manda Group reúne los clubes Manda Reñaca y Manda Viña del Mar, las fiestas Costa Nights, el restaurante Costa Sushi (con locales en Valparaíso y Curauma) y Carbon.",
+    a: "Manda Group reúne los clubes Manda Reñaca y Manda Viña del Mar, las fiestas Costa Nights, el restaurante Costa Sushi (con locales en Reñaca, Valparaíso y Curauma) y Carbón.",
   },
 ] as const;
 
