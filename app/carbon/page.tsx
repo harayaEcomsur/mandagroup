@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localPixelBrand } from "@/lib/mandagroup-pixel";
 import { ArrowUpRight } from "lucide-react";
 import { clientConfig } from "@/config/client.config";
 import { Header } from "@/components/layout/Header";
@@ -44,6 +45,7 @@ export default async function CarbonPage() {
               <Reveal key={c.id} mode="load" delay={120 + i * 90}>
                 <a
                   href={c.source.url}
+                  data-pixel-brand={localPixelBrand(c) ?? undefined}
                   target="_blank"
                   rel="noreferrer"
                   className="group flex h-full flex-col items-center gap-6 rounded-2xl bg-foreground/[0.06] px-6 py-9 text-center ring-1 ring-foreground/10 transition-[transform,background-color,box-shadow] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 hover:bg-foreground/[0.09] hover:ring-primary/40 active:scale-[0.98]"

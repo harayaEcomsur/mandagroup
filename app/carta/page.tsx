@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { localPixelBrand } from "@/lib/mandagroup-pixel";
 import { ArrowDown, ArrowUpRight, ExternalLink, FileText } from "lucide-react";
 import { clientConfig } from "@/config/client.config";
 import { Header } from "@/components/layout/Header";
@@ -65,6 +66,7 @@ export default async function CartaPage() {
                     </a>
                     <a
                       href={c.source.url}
+                  data-pixel-brand={localPixelBrand(c) ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="mt-4 inline-flex items-center gap-1.5 text-xs text-foreground/60 hover:text-primary"
@@ -78,6 +80,7 @@ export default async function CartaPage() {
                   <>
                     <a
                       href={c.source.url}
+                  data-pixel-brand={localPixelBrand(c) ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="group mt-6 inline-flex items-center justify-between gap-3 rounded-full bg-primary py-1.5 pl-5 pr-1.5 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"

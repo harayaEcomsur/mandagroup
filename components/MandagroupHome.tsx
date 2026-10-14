@@ -6,6 +6,7 @@ import { Reveal } from "@/components/mandagroup/Reveal";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
 import { listLocales, reservationLink } from "@/lib/mandagroup-catalog";
+import { eventPixelBrand, localPixelBrand } from "@/lib/mandagroup-pixel";
 import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
 import { vestiCompanyUrl } from "@/lib/vesti";
 import {
@@ -154,6 +155,7 @@ export async function MandagroupHome() {
                       key={e.id}
                       href={e.ticketUrl}
                       data-pixel-event={e.title}
+                      data-pixel-brand={eventPixelBrand(e) ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="group relative block aspect-[4/5] overflow-hidden rounded-[1.25rem] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1"
@@ -190,6 +192,7 @@ export async function MandagroupHome() {
                     <a
                       href={hero.events[0].ticketUrl}
                       data-pixel-event={hero.events[0].title}
+                      data-pixel-brand={eventPixelBrand(hero.events[0]) ?? undefined}
                       target="_blank"
                       rel="noreferrer"
                       className="shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-background transition-transform active:scale-[0.98]"
@@ -228,6 +231,7 @@ export async function MandagroupHome() {
                   <a
                     href={p.ticketUrl}
                     data-pixel-event={p.title}
+                    data-pixel-brand={eventPixelBrand(p) ?? undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="group flex gap-5 rounded-2xl bg-foreground/[0.04] p-3 ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-foreground/[0.07]"
@@ -364,6 +368,7 @@ export async function MandagroupHome() {
                   <a
                     href={e.ticketUrl}
                     data-pixel-event={e.title}
+                      data-pixel-brand={eventPixelBrand(e) ?? undefined}
                     target="_blank"
                     rel="noreferrer"
                     className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-foreground/[0.07] px-5 py-3 text-sm font-semibold text-foreground ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-primary hover:text-background active:scale-[0.98]"
@@ -517,6 +522,7 @@ export async function MandagroupHome() {
                     <div className="mt-5">
                       <a
                         href={reserva.href}
+                        data-pixel-brand={localPixelBrand(l) ?? undefined}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-foreground/[0.08] px-4 py-2.5 text-sm font-semibold text-foreground ring-1 ring-foreground/10 transition-colors duration-300 hover:bg-primary hover:text-background active:scale-[0.98]"

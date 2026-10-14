@@ -8,8 +8,19 @@ import "./globals.css";
 
 export const metadata: Metadata = buildMetadata(clientConfig);
 
-// Opcional: sin la variable el sitio no carga nada de Meta (ver MetaPixel).
-const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+// Opcionales: sin ninguna variable el sitio no carga nada de Meta (ver
+// MetaPixel). El general recibe todo; el de cada marca, sus visitas y las
+// acciones de esa marca (lib/mandagroup-pixel).
+const metaPixels = {
+  group: process.env.NEXT_PUBLIC_META_PIXEL_ID || undefined,
+  brands: {
+    renaca: process.env.NEXT_PUBLIC_META_PIXEL_RENACA || undefined,
+    vina: process.env.NEXT_PUBLIC_META_PIXEL_VINA || undefined,
+    carbon: process.env.NEXT_PUBLIC_META_PIXEL_CARBON || undefined,
+    costa: process.env.NEXT_PUBLIC_META_PIXEL_COSTA || undefined,
+  },
+};
+const hasMetaPixel = Boolean(metaPixels.group || Object.values(metaPixels.brands).some(Boolean));
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const fontVariables = getFontVariables(clientConfig.branding.fontPairing);
@@ -27,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         {children}
-        {metaPixelId && <MetaPixel pixelId={metaPixelId} />}
+        {hasMetaPixel && <MetaPixel pixels={metaPixels} />}
         {!clientConfig.seo.jsonLdInPage && (
           <script
             type="application/ld+json"

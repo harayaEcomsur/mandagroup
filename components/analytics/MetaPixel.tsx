@@ -2,11 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { PIXEL_BRANDS, type PixelBrand } from "@/lib/mandagroup-pixel";
 
-// Pixel de Meta (opcional, solo si el sitio define NEXT_PUBLIC_META_PIXEL_ID).
+export interface MetaPixels {
+  group?: string;
+  brands: Partial<Record<PixelBrand, string>>;
+}
+
+// Pixeles de Meta (opcionales): uno general del grupo (NEXT_PUBLIC_META_PIXEL_ID)
+// y, si existen, uno por marca (Reñaca, Viña, Carbon, Costa Sushi). Todos
+// reciben las visitas (PageView), así cada marca puede mostrarle anuncios a
+// quien pasó por el sitio; cada acción va al general y al de su marca
+// (data-pixel-brand en el enlace, ver lib/mandagroup-pixel).
+//
 // La venta de entradas ocurre fuera del sitio (Vesti), así que el Pixel no ve
 // la compra: lo que sí mide es la intención — el clic a la boletería se
-// registra como InitiateCheckout y el clic a WhatsApp como Contact. Con eso
+// registra como InitiateCheckout, el clic a reservar (WhatsApp/Instagram)
+// como Contact y abrir una carta como ViewContent. Con eso
 // Meta puede optimizar anuncios por "personas que van a comprar" y armar
 // públicos de retargeting de quienes visitaron el sitio.
 //
@@ -47,7 +59,7 @@ function saveConsent(value: "granted" | "denied") {
 
 // Snippet oficial de Meta (fbevents.js), sin el <noscript>: sin JS no hay
 // aviso de consentimiento que aceptar, así que tampoco hay Pixel.
-function loadPixel(pixelId: string) {
+function loadPixel(pixelIds: string[]) {
   if (window.fbq) return;
   const fbq = function (...args: unknown[]) {
     const f = fbq as unknown as { callMethod?: (...a: unknown[]) => void; queue: unknown[] };
@@ -64,10 +76,25 @@ function loadPixel(pixelId: string) {
   script.async = true;
   script.src = "https://connect.facebook.net/en_US/fbevents.js";
   document.head.appendChild(script);
-  window.fbq("init", pixelId);
+  for (const id of pixelIds) window.fbq("init", id);
 }
 
-export function MetaPixel({ pixelId }: { pixelId: string }) {
+function allIds(p: MetaPixels): string[] {
+  return Array.from(new Set([p.group, ...PIXEL_BRANDS.map((b) => p.brands[b])].filter(Boolean) as string[]));
+}
+
+// La acción va al general y al Pixel de su marca (si tiene); trackSingle
+// para que no llegue también a los de las otras marcas.
+function trackAction(p: MetaPixels, brand: string | undefined, event: string, params?: Record<string, string>) {
+  const own = brand && PIXEL_BRANDS.includes(brand as PixelBrand) ? p.brands[brand as PixelBrand] : undefined;
+  for (const id of new Set([p.group, own].filter(Boolean) as string[])) {
+    window.fbq?.("trackSingle", id, event, { ...params, ...(brand ? { brand } : {}) });
+  }
+}
+
+const isCarta = (href: string) => href.includes("menu.fu.do") || /\/cartas\/|\.pdf($|\?)/i.test(href);
+
+export function MetaPixel({ pixels }: { pixels: MetaPixels }) {
   const pathname = usePathname() ?? "/";
   const [consent, setConsent] = useState<string | null>(null);
   const [ready, setReady] = useState(false); // evita mostrar el aviso antes de leer localStorage
@@ -82,9 +109,9 @@ export function MetaPixel({ pixelId }: { pixelId: string }) {
   // PageView en cada navegación (el App Router no recarga la página).
   useEffect(() => {
     if (!active) return;
-    loadPixel(pixelId);
+    loadPixel(allIds(pixels));
     window.fbq?.("track", "PageView");
-  }, [active, pixelId, pathname]);
+  }, [active, pixels, pathname]);
 
   // Un solo listener para todo el sitio: cualquier link a la boletería o a
   // WhatsApp — tarjetas de eventos, botones del chat, footer — sin tener que
@@ -94,18 +121,21 @@ export function MetaPixel({ pixelId }: { pixelId: string }) {
     function onClick(e: MouseEvent) {
       const a = (e.target as HTMLElement | null)?.closest?.("a");
       if (!a?.href) return;
+      const brand = a.dataset.pixelBrand || (a.href.includes("menu.fu.do") ? "costa" : undefined);
       if (a.href.includes("vesti.cl")) {
-        window.fbq?.("track", "InitiateCheckout", {
+        trackAction(pixels, brand, "InitiateCheckout", {
           content_name: a.dataset.pixelEvent ?? a.textContent?.trim() ?? "",
           content_category: "entradas",
         });
-      } else if (a.href.includes("wa.me/") || a.href.includes("api.whatsapp.com")) {
-        window.fbq?.("track", "Contact");
+      } else if (a.href.includes("wa.me/") || a.href.includes("api.whatsapp.com") || a.href.includes("ig.me/")) {
+        trackAction(pixels, brand, "Contact");
+      } else if (isCarta(a.href)) {
+        trackAction(pixels, brand, "ViewContent", { content_category: "carta" });
       }
     }
     document.addEventListener("click", onClick, { capture: true });
     return () => document.removeEventListener("click", onClick, { capture: true });
-  }, [active]);
+  }, [active, pixels]);
 
   if (!ready || consent || isInternal(pathname)) return null;
 
