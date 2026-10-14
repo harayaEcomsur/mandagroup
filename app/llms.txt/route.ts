@@ -2,6 +2,7 @@ import { clientConfig } from "@/config/client.config";
 import { listActiveEvents } from "@/lib/mandagroup-store";
 import { BRANDS, buildFaq, eventVenueLabel } from "@/lib/mandagroup-brands";
 import { listCartas, listLocales, reservationLink } from "@/lib/mandagroup-catalog";
+import { BRAND_PAGES, FIESTAS_PAGE, brandPagePath } from "@/lib/mandagroup-pages";
 
 // /llms.txt (llmstxt.org): resumen en Markdown para asistentes de IA
 // (ChatGPT, Claude, Perplexity) — qué es Manda Group, sus marcas, dónde
@@ -23,12 +24,16 @@ export async function GET() {
     "",
     "## Marcas",
     "",
-    ...BRANDS.map(
-      (b) =>
-        `- **${b.name}**: ${b.kind}.${b.address ? ` Dirección: ${b.address}.` : ""} Instagram: https://www.instagram.com/${b.handle}/`
-    ),
+    ...BRAND_PAGES.map((p) => {
+      const b = BRANDS.find((x) => x.key === p.key)!;
+      // Direcciones: las de los locales del panel (Costa Sushi tiene dos).
+      const addresses = locales
+        .filter((l) => l.showOnSite && l.address && l.brand === p.catalogBrand && (!p.localIds || p.localIds.includes(l.id)))
+        .map((l) => `${l.name}, ${l.address}`);
+      return `- **[${p.name}](${base}${brandPagePath(p)})**: ${p.intro}${addresses.length ? ` Dirección: ${addresses.join("; ")}.` : ""} Instagram: https://www.instagram.com/${b.handle}/`;
+    }),
     "",
-    "## Próximas fiestas",
+    `## [Próximas fiestas](${base}${FIESTAS_PAGE.path})`,
     "",
     ...(events.length
       ? events.map((e) => `- ${e.eventDate} · ${e.title} (${eventVenueLabel(e)}): ${e.ticketUrl}`)
@@ -44,6 +49,8 @@ export async function GET() {
     "## Enlaces",
     "",
     `- [Sitio](${base}/): cartelera, marcas y contacto`,
+    `- [Fiestas](${base}${FIESTAS_PAGE.path}): cartelera completa con entradas en Vesti`,
+    ...BRAND_PAGES.map((p) => `- [${p.name}](${base}${brandPagePath(p)}): ${p.eyebrow}`),
     ...locales
       .filter((l) => l.showOnSite && reservationLink(l))
       .map((l) => `- [Reservas ${l.name}](${reservationLink(l)!.href})`),

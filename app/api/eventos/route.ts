@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { BRAND_PAGES, FIESTAS_PAGE, brandPagePath } from "@/lib/mandagroup-pages";
 import { clientConfig } from "@/config/client.config";
 import { currentAdminUser } from "@/lib/auth";
 import {
@@ -93,7 +94,7 @@ const localSchema = z.object({
 });
 
 // Rutas del sitio que una URL de QR no puede pisar.
-const RESERVED = ["/", "/carta", "/carbon", "/api", "/eventos", "/privacidad", "/llms.txt", "/robots.txt", "/sitemap.xml"];
+const RESERVED = ["/", "/carta", "/carbon", "/fiestas", "/restaurantes", "/clubes", "/api", "/eventos", "/privacidad", "/llms.txt", "/robots.txt", "/sitemap.xml"];
 
 const cartaSchema = z.object({
   id: z.string().min(1).max(60),
@@ -199,6 +200,11 @@ export async function PATCH(req: Request) {
     revalidatePath("/carta");
     revalidatePath("/carbon");
     revalidatePath("/llms.txt");
+  }
+  // Páginas de fiestas y de cada marca: muestran fechas, locales y cartas.
+  if (["upsertEvent", "setEventActive", "setVestiHidden", "setEventFeatured", "saveLocales", "saveCartas"].includes(parsed.data.action)) {
+    revalidatePath(FIESTAS_PAGE.path);
+    for (const p of BRAND_PAGES) revalidatePath(brandPagePath(p));
   }
   return Response.json({ ok: true });
 }

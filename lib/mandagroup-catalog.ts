@@ -121,7 +121,9 @@ export const DEFAULT_LOCALES: Local[] = [
   {
     id: "carbon",
     brand: "carbon",
-    name: "Carbon",
+    name: "Carbón",
+    address: "Av. Central 184, Reñaca",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Carb%C3%B3n+Av.+Central+184+Re%C3%B1aca",
     reservation: { type: "none" },
     showOnSite: true,
     order: 4,

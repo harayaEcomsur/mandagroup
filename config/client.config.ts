@@ -36,7 +36,7 @@ export const clientConfig = defineClientConfig({
     layout: "clasico",
     credit: true,
     navLinks: [
-      { href: "/#eventos", label: "Cartelera" },
+      { href: "/fiestas", label: "Fiestas" },
       { href: "/carta", label: "Carta" },
       { href: "/#marcas", label: "Marcas" },
       { href: "/#instagram", label: "Instagram" },
