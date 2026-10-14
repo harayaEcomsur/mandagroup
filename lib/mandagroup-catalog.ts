@@ -41,6 +41,7 @@ export interface Local {
   name: string; // "Manda Reñaca", "Costa Sushi Curauma"
   address?: string;
   mapsUrl?: string;
+  hours?: string; // texto tal cual se muestra ("12:00 - 23:00")
   reservation: Reservation;
   showOnSite: boolean;
   order: number;
@@ -103,13 +104,15 @@ export const DEFAULT_LOCALES: Local[] = [
     order: 1,
   },
   {
-    // Mismo local físico que Carbón (Av. Central 184).
+    // Mismo local físico que Carbón (Av. Central 184). Direcciones, horario y
+    // WhatsApp de los 3 locales: los del sitio de Costa Sushi (tabla locations).
     id: "costa-renaca",
     brand: "costa",
     name: "Costa Sushi Reñaca",
     address: "Av. Central 184, Reñaca",
     mapsUrl: "https://www.google.com/maps/search/?api=1&query=Costa+Sushi+Av.+Central+184+Re%C3%B1aca",
-    reservation: { type: "none" },
+    hours: "12:00 - 23:00",
+    reservation: { type: "whatsapp", phone: "56975952454" },
     showOnSite: true,
     order: 2,
   },
@@ -117,7 +120,10 @@ export const DEFAULT_LOCALES: Local[] = [
     id: "costa-valparaiso",
     brand: "costa",
     name: "Costa Sushi Valparaíso",
-    reservation: { type: "none" },
+    address: "Bernardo O'Higgins 1274, Valparaíso",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Costa+Sushi+Bernardo+O%27Higgins+1274+Valpara%C3%ADso",
+    hours: "12:00 - 23:00",
+    reservation: { type: "whatsapp", phone: "56984999478" },
     showOnSite: true,
     order: 3,
   },
@@ -125,7 +131,10 @@ export const DEFAULT_LOCALES: Local[] = [
     id: "costa-curauma",
     brand: "costa",
     name: "Costa Sushi Curauma",
-    reservation: { type: "none" },
+    address: "Boulevard 68, Local 20, Placilla, Valparaíso",
+    mapsUrl: "https://www.google.com/maps/search/?api=1&query=Costa+Sushi+Curauma+Boulevard+68+Local+20",
+    hours: "12:00 - 23:00",
+    reservation: { type: "whatsapp", phone: "56958121291" },
     showOnSite: true,
     order: 4,
   },
@@ -335,7 +344,9 @@ export function reservationLink(l: Local): { href: string; via: string } | null 
   const r = l.reservation;
   if (r.type === "whatsapp" && r.phone) {
     const text = encodeURIComponent(`Hola! Quiero reservar en ${l.name}`);
-    return { href: `https://wa.me/${r.phone.replace(/\D/g, "")}?text=${text}`, via: "Por WhatsApp de reservas" };
+    // Costa Sushi usa su WhatsApp para pedidos y reservas.
+    const via = l.brand === "costa" ? "Por WhatsApp, pedidos y reservas" : "Por WhatsApp de reservas";
+    return { href: `https://wa.me/${r.phone.replace(/\D/g, "")}?text=${text}`, via };
   }
   if (r.type === "instagram" && r.handle) {
     const h = r.handle.replace(/^@/, "");

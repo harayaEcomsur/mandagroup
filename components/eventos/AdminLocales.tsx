@@ -97,6 +97,15 @@ export function AdminLocales({
                     onChange={(e) => update(l.id, { address: e.target.value || undefined })}
                   />
                 </label>
+                <label className="text-xs text-foreground/60 sm:col-span-2">
+                  Horario (opcional, se muestra tal cual)
+                  <input
+                    className={`${input} mt-1`}
+                    value={l.hours ?? ""}
+                    placeholder="12:00 - 23:00"
+                    onChange={(e) => update(l.id, { hours: e.target.value || undefined })}
+                  />
+                </label>
                 <label className="text-xs text-foreground/60">
                   Reservas por
                   <select

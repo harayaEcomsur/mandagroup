@@ -82,6 +82,7 @@ const localSchema = z.object({
   brand: brandSchema,
   name: z.string().min(2).max(80),
   address: z.string().max(160).optional(),
+  hours: z.string().max(80).optional(),
   mapsUrl: z.string().url().optional().or(z.literal("").transform(() => undefined)),
   reservation: z.discriminatedUnion("type", [
     z.object({ type: z.literal("whatsapp"), phone: z.string().regex(/^\d{8,15}$/, "WhatsApp: solo dígitos con código de país (569…)") }),

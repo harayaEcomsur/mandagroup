@@ -69,7 +69,9 @@ export async function BrandLanding({ page }: { page: BrandPage }) {
   const { brand, events, locales, menus, image } = await loadBrandLanding(page);
   const absoluteMenu = menus[0] ? (menus[0].external ? menus[0].href : undefined) : undefined;
   const jsonLd = buildBrandPageJsonLd({ page, path, locales, events, menuUrl: absoluteMenu });
-  const firstReserva = locales.map((l) => ({ l, r: reservationLink(l) })).find((x) => x.r);
+  // Botón principal "Reservar" solo con un local; con varios (Costa Sushi)
+  // cada tarjeta de local tiene el suyo y arriba va la carta.
+  const firstReserva = locales.length === 1 ? locales.map((l) => ({ l, r: reservationLink(l) })).find((x) => x.r) : undefined;
   const siblings = BRAND_PAGES.filter((p) => p.key !== page.key);
 
   return (
@@ -186,6 +188,7 @@ export async function BrandLanding({ page }: { page: BrandPage }) {
                   <Reveal key={l.id} delay={(i % 2) * 80} className="rounded-2xl bg-foreground/[0.04] p-6 ring-1 ring-foreground/10">
                     <h3 className="font-heading text-xl font-semibold text-foreground">{l.name}</h3>
                     {l.address && <p className="mt-1 text-sm text-foreground/60">{l.address}</p>}
+                    {l.hours && <p className="mt-1 text-sm text-foreground/60">Horario: {l.hours}</p>}
                     {reserva ? (
                       <div className="mt-5">
                         <a

@@ -166,8 +166,10 @@ export function buildMandagroupJsonLd(events: MandagroupEvent[], locales: Local[
 // "Av. Central 184, Reñaca" → calle + comuna para PostalAddress. Reñaca es
 // un sector de Viña del Mar: se dice así para que Google ubique bien la comuna.
 function postalAddress(address: string) {
-  const [street, ...rest] = address.split(",").map((s) => s.trim());
-  const place = rest.join(", ") || undefined;
+  // "Boulevard 68, Local 20, Placilla, Valparaíso": la última parte es la comuna.
+  const parts = address.split(",").map((s) => s.trim());
+  const street = parts.length > 2 ? parts.slice(0, -1).join(", ") : parts[0];
+  const place = parts.length > 2 ? parts[parts.length - 1] : parts[1];
   return {
     "@type": "PostalAddress",
     streetAddress: street,
@@ -216,6 +218,7 @@ export function buildBrandPageJsonLd({
         ...(withAddress.length === 1 && page.alternateName ? { alternateName: page.alternateName } : {}),
         address: postalAddress(l.address!),
         ...(l.mapsUrl ? { hasMap: l.mapsUrl } : {}),
+        ...(l.reservation.type === "whatsapp" ? { telephone: `+${l.reservation.phone}` } : {}),
         ...reservationProps(l),
       }))
     : [{ ...common, "@id": `${url}#${page.key}`, name: page.name, alternateName: page.alternateName, areaServed: "Región de Valparaíso" }];
