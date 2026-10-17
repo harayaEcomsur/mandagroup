@@ -10,8 +10,9 @@ import { Reveal } from "@/components/mandagroup/Reveal";
 import { BRAND_LOGO, hostOf, listCartas } from "@/lib/mandagroup-catalog";
 
 export const metadata: Metadata = {
-  title: "Cartas | Manda Group",
-  description: "Cartas de Manda, Carbon y Costa Sushi.",
+  title: "Carta Manda y Costa Sushi | Manda Group",
+  description:
+    "Carta de Manda (tablas, quesadillas, empanaditas y coctelería) y de Costa Sushi en Reñaca, Valparaíso y Curauma. Mírala aquí o descárgala en PDF.",
   alternates: { canonical: "/carta" },
 };
 

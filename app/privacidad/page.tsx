@@ -6,6 +6,9 @@ import { ArcoRequestForm } from "@/components/privacy/ArcoRequestForm";
 
 export const metadata: Metadata = {
   title: `Política de privacidad — ${clientConfig.meta.businessName}`,
+  description: `Cómo ${clientConfig.meta.businessName} trata tus datos personales y cómo ejercer tus derechos de acceso, rectificación, supresión y oposición (Ley 21.719).`,
+  // Propio: si no, hereda el canonical "/" del layout y Google la trata como la home.
+  alternates: { canonical: "/privacidad" },
 };
 
 // Política de privacidad dinámica (ver lib/privacy-content.ts) + el canal para

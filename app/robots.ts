@@ -9,10 +9,12 @@ export default function robots(): MetadataRoute.Robots {
     // paneles internos y endpoints.
     rules: {
       userAgent: "*",
-      allow: "/",
       // Las páginas de QR y los PDFs de cartas NO van acá a propósito: si se
       // bloquea el rastreo, Google no ve su "noindex" (X-Robots-Tag en
       // next.config) y podría listar la URL igual si alguien la enlaza.
+      // /api/img sí se permite: ahí se sirven los flyers y fotos (ver
+      // app/api/img/route.ts); bloqueado, Google no ve las imágenes.
+      allow: ["/", "/api/img"],
       disallow: ["/api/", "/eventos/admin", "/agenda/admin", "/tienda/admin", "/inmobiliaria/admin", "/embed/", "/variantes"],
     },
     sitemap: `${base}/sitemap.xml`,
