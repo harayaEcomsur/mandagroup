@@ -95,14 +95,14 @@ export async function MandagroupHome() {
         <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-background to-transparent" />
         {/* Mobile: arriba y compacto, para que "Ver carta Manda" quede a la vista
             al llegar desde el QR de la mesa sin tener que bajar. */}
-        <Container className="grid items-start gap-12 pb-14 pt-8 md:min-h-[78dvh] md:items-center md:py-20 lg:grid-cols-12 lg:py-24">
+        <Container className="grid items-start gap-12 pb-14 pt-6 md:min-h-[78dvh] md:items-center md:py-20 lg:grid-cols-12 lg:py-24">
           <Reveal mode="load" className="lg:col-span-8">
             {/* Quien llega suele estar ya en Manda (QR de la mesa) o buscó un panorama:
                 el gancho es que Manda es la puerta a todo el grupo. Las palabras
                 que se buscan (clubes, fiestas, sushi, parrilla, comunas) van en la
                 bajada; el título lleva la marca. */}
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary md:tracking-[0.3em]">
-              Manda Group · Reñaca · Viña del Mar · Valparaíso
+              <span className="hidden sm:inline">Manda Group · </span>Reñaca · Viña del Mar · Valparaíso
             </p>
             <h1 className="mt-4 max-w-[26ch] text-balance font-heading text-4xl font-semibold leading-[1.04] tracking-tight text-foreground sm:text-5xl md:mt-5 md:text-6xl lg:text-[3.6rem]">
               Manda es solo el comienzo de tu noche en la costa.
