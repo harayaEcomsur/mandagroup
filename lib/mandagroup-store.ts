@@ -217,6 +217,11 @@ export async function listActiveEvents(): Promise<MandagroupEvent[]> {
     // Visible hasta que TERMINA (no hasta que empieza): una promoción de
     // varios días, como Cyber Days, sigue en la cartelera mientras dure.
     .filter((v) => v.lastDate >= today && !hidden.includes(v.vestiId))
+    // Todo agotado y venta cerrada = ya no se puede comprar: fuera de la
+    // cartelera, aunque el evento siga "vigente" (Cyber Days: venta hasta el
+    // 11-oct, evento hasta el 1-nov por el plazo de canje). Solo la fecha de
+    // cierre no basta: Vesti la trae vencida en eventos que siguen a la venta.
+    .filter((v) => !(v.soldOut && v.salesEndsAt && Date.parse(v.salesEndsAt) < Date.now()))
     .filter((v) => !manualUrls.has(v.url.replace(/^https?:\/\/(www\.)?/, "")))
     .map((v) => ({
       id: `vesti:${v.vestiId}`,

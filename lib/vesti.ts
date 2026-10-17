@@ -38,6 +38,10 @@ export interface VestiEvent {
   endsAt: string | null;
   eventDate: string; // "YYYY-MM-DD" en hora de Chile (la noche del evento)
   lastDate: string; // "YYYY-MM-DD" en hora de Chile del día en que termina (= eventDate si dura una noche)
+  // Cierre de la venta según Vesti (ISO UTC): el último dateEnd de las
+  // entradas visibles. OJO: no es confiable solo — hay eventos a la venta con
+  // esta fecha ya pasada (Luis Jara, Bombo Fica). Se usa junto con soldOut.
+  salesEndsAt: string | null;
   imageUrl: string | null;
   url: string;
   // Precio más bajo de una entrada pagada y disponible (las cortesías de $0
@@ -69,7 +73,7 @@ interface RawEventDetail {
   dateEnd: string | null;
   isCanceled: boolean | null;
   isRescheduled: boolean | null;
-  tickets: { name: string; price: number; isSoldOut: boolean }[] | null;
+  tickets: { name: string; price: number; isSoldOut: boolean; visible: boolean | null; dateEnd: string | null }[] | null;
 }
 
 const PROFILE_QUERY = `query($i: GetVendorPublicProfileInput!) {
@@ -82,7 +86,7 @@ const EVENT_QUERY = `query($i: GetEventInput!) {
   event(getEventInput: $i) {
     place comuna hideAddress dateEnd isCanceled isRescheduled
     address { address lat lng }
-    tickets { name price isSoldOut }
+    tickets { name price isSoldOut visible dateEnd }
   }
 }`;
 
@@ -177,7 +181,12 @@ async function fetchVenueEvents(venue: EventVenue): Promise<VestiEvent[] | null>
     const d = details[idx]?.event ?? null;
     if (d?.isCanceled) return [];
     const name = cleanName(e.name);
-    const tickets = (d?.tickets ?? []).map((t) => ({ name: t.name, price: t.price, soldOut: t.isSoldOut }));
+    const visibleTickets = (d?.tickets ?? []).filter((t) => t.visible !== false);
+    const tickets = visibleTickets.map((t) => ({ name: t.name, price: t.price, soldOut: t.isSoldOut }));
+    const salesEndsAt =
+      visibleTickets.length > 0 && visibleTickets.every((t) => t.dateEnd)
+        ? visibleTickets.map((t) => t.dateEnd!).sort().at(-1)!
+        : null;
     const paid = tickets.filter((t) => t.price > 0 && !t.soldOut).map((t) => t.price);
     const showAddress = d && !d.hideAddress && d.address?.address;
     return [
@@ -195,6 +204,7 @@ async function fetchVenueEvents(venue: EventVenue): Promise<VestiEvent[] | null>
           d?.dateEnd && Date.parse(d.dateEnd) - Date.parse(e.dateIni) > 18 * 3600 * 1000
             ? chileDate(d.dateEnd)
             : chileDate(e.dateIni),
+        salesEndsAt,
         imageUrl: e.images?.[0] ?? null,
         url: `https://www.vesti.cl/events/${e.slug}`,
         lowestPrice: paid.length ? Math.min(...paid) : null,
@@ -226,7 +236,7 @@ const cachedVestiEvents = unstable_cache(
     if (all.some((list) => list === null)) throw new Error("Vesti no respondió");
     return (all as VestiEvent[][]).flat().sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   },
-  ["vesti-events-v6"],
+  ["vesti-events-v7"],
   { revalidate: 900, tags: [VESTI_CACHE_TAG] }
 );
 
