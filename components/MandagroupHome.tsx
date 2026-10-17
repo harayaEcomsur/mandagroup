@@ -93,26 +93,28 @@ export async function MandagroupHome() {
         />
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-background via-background/85 to-background/30" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-background to-transparent" />
-        <Container className="grid min-h-[78dvh] items-center gap-12 py-20 lg:grid-cols-12 lg:py-24">
+        {/* Mobile: arriba y compacto, para que "Ver carta Manda" quede a la vista
+            al llegar desde el QR de la mesa sin tener que bajar. */}
+        <Container className="grid items-start gap-12 pb-14 pt-8 md:min-h-[78dvh] md:items-center md:py-20 lg:grid-cols-12 lg:py-24">
           <Reveal mode="load" className="lg:col-span-8">
             {/* Quien llega suele estar ya en Manda (QR de la mesa) o buscó un panorama:
                 el gancho es que Manda es la puerta a todo el grupo. Las palabras
                 que se buscan (clubes, fiestas, sushi, parrilla, comunas) van en la
                 bajada; el título lleva la marca. */}
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary md:tracking-[0.3em]">
               Manda Group · Reñaca · Viña del Mar · Valparaíso
             </p>
-            <h1 className="mt-5 max-w-[26ch] text-balance font-heading text-5xl font-semibold leading-[1.04] tracking-tight text-foreground sm:text-6xl lg:text-[3.6rem]">
+            <h1 className="mt-4 max-w-[26ch] text-balance font-heading text-4xl font-semibold leading-[1.04] tracking-tight text-foreground sm:text-5xl md:mt-5 md:text-6xl lg:text-[3.6rem]">
               Manda es solo el comienzo de tu noche en la costa.
             </h1>
-            <p className="mt-6 max-w-[52ch] text-lg leading-relaxed text-foreground/70">
+            <p className="mt-4 max-w-[52ch] text-base leading-relaxed text-foreground/70 md:mt-6 md:text-lg">
               Detrás de Manda hay un grupo entero por descubrir: los clubes de Reñaca y Viña del Mar, las fiestas Costa
               Nights, el sushi de Costa Sushi en Reñaca, Valparaíso y Curauma, y la parrilla de Carbón. ¿Ya los probaste
               todos?
             </p>
             {/* En mobile manda la carta: el QR de las mesas de Manda trae aquí
                 (antes llevaba al sitio antiguo, con la carta como lo primero). */}
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 md:hidden">
+            <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4 md:hidden">
               <a
                 href={mandaCarta}
                 target="_blank"
