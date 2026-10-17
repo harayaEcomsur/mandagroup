@@ -50,7 +50,10 @@ export const BRANDS = [
     logo: "/clients/mandagroup/logo-carbon.webp",
     handle: "carbon.chile",
     tokenEnv: "INSTAGRAM_TOKEN_CARBON",
-    fallbackImage: null,
+    // Foto del post de @carbon.chile del 27-ago (corte a la parrilla, papas y
+    // schops). carbon-og.jpg: el mismo recorte en 1200×630 para compartir.
+    fallbackImage: "/clients/mandagroup/carbon.jpg",
+    ogImage: "/clients/mandagroup/carbon-og.jpg",
   },
 ] as const;
 

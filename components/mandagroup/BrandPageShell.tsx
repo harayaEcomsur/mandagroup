@@ -10,7 +10,7 @@ import { brandPagePath, type BrandPage } from "@/lib/mandagroup-pages";
 export function brandMetadata(page: BrandPage): Metadata {
   const path = brandPagePath(page);
   const brand = BRANDS.find((b) => b.key === page.key)!;
-  const image = brand.fallbackImage ?? clientConfig.seo.ogImageUrl;
+  const image = ("ogImage" in brand ? brand.ogImage : null) ?? brand.fallbackImage ?? clientConfig.seo.ogImageUrl;
   return {
     // absolute: el título ya trae la marca; sin el sufijo "| Manda Group".
     title: { absolute: page.title },
