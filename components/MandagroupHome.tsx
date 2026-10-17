@@ -99,7 +99,26 @@ export async function MandagroupHome() {
               Clubes en Reñaca y Viña del Mar, las fiestas Costa Nights, Costa Sushi en Reñaca, Valparaíso y Curauma, y
               Carbon.
             </p>
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+            {/* En mobile manda la carta: el QR de las mesas de Manda trae aquí
+                (antes llevaba al sitio antiguo, con la carta como lo primero). */}
+            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 md:hidden">
+              <a
+                href="/carta#manda"
+                className="group inline-flex items-center gap-3 rounded-full bg-primary py-2 pl-6 pr-2 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
+              >
+                Ver carta Manda
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                  <ArrowUpRight size={16} strokeWidth={2} />
+                </span>
+              </a>
+              <a
+                href="#eventos"
+                className="text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
+              >
+                Ver cartelera
+              </a>
+            </div>
+            <div className="mt-10 hidden flex-wrap items-center gap-x-8 gap-y-4 md:flex">
               <a
                 href="#eventos"
                 className="group inline-flex items-center gap-3 rounded-full bg-primary py-2 pl-6 pr-2 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
