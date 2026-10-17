@@ -5,7 +5,7 @@ import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/mandagroup/Reveal";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
-import { listLocales, reservationLink } from "@/lib/mandagroup-catalog";
+import { listCartas, listLocales, reservationLink } from "@/lib/mandagroup-catalog";
 import { eventPixelBrand, localPixelBrand } from "@/lib/mandagroup-pixel";
 import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
 import { vestiCompanyUrl } from "@/lib/vesti";
@@ -31,11 +31,14 @@ import { EventCard, clp, dateParts, startTime, untilDate } from "@/components/ma
 // WhatsAppButton/ChatWidget y clientConfig como cualquier otro cliente.
 export async function MandagroupHome() {
   const { contact } = clientConfig;
-  const [events, feeds, allLocales] = await Promise.all([
+  const [events, feeds, allLocales, cartas] = await Promise.all([
     listActiveEvents(),
     Promise.all(BRANDS.map((b) => getAccountMedia(process.env[b.tokenEnv], 6))),
     listLocales(),
+    listCartas(),
   ]);
+  // Botón "Ver carta Manda" (mobile): directo al archivo, sin pasar por /carta.
+  const mandaCarta = cartas.find((c) => c.id === "manda")?.source.url ?? "/cmanda.pdf";
   // contact.whatsapp = WhatsApp de CONSULTAS (respuestas automáticas), no de
   // reservas. Reservas: Reñaca por su WhatsApp, Viña por Instagram.
   const centralWa = contact.whatsapp ? buildWhatsAppLink(contact.whatsapp, contact.whatsappPrefilledMessage) : null;
@@ -103,7 +106,9 @@ export async function MandagroupHome() {
                 (antes llevaba al sitio antiguo, con la carta como lo primero). */}
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 md:hidden">
               <a
-                href="/carta#manda"
+                href={mandaCarta}
+                target="_blank"
+                rel="noreferrer"
                 className="group inline-flex items-center gap-3 rounded-full bg-primary py-2 pl-6 pr-2 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
               >
                 Ver carta Manda
