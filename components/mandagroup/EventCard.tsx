@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeImage } from "@/components/mandagroup/SafeImage";
 import { ArrowUpRight } from "lucide-react";
 import type { MandagroupEvent } from "@/lib/mandagroup-store";
 import { eventVenueLabel } from "@/lib/mandagroup-brands";
@@ -39,6 +39,15 @@ export function clp(n: number): string {
   return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(n);
 }
 
+// Sin flyer (o si no carga): el nombre de la fecha sobre el degradado de marca.
+export function FlyerPlaceholder({ title, size = "lg" }: { title: string; size?: "lg" | "sm" }) {
+  return (
+    <div className={`absolute inset-0 flex flex-col justify-end bg-gradient-to-br from-primary/25 via-background to-background ${size === "lg" ? "p-6" : "p-3"}`}>
+      <p className={`font-heading font-semibold leading-tight text-foreground ${size === "lg" ? "text-2xl" : "text-sm"}`}>{title}</p>
+    </div>
+  );
+}
+
 export function EventCard({ event: e, className = "", headingLevel = "h3" }: { event: MandagroupEvent; className?: string; headingLevel?: "h2" | "h3" }) {
   const d = dateParts(e);
   const time = startTime(e);
@@ -47,17 +56,16 @@ export function EventCard({ event: e, className = "", headingLevel = "h3" }: { e
     <article className={`group flex flex-col ${className}`}>
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-foreground/[0.05] ring-1 ring-foreground/10">
         {e.imageUrl ? (
-          <Image
+          <SafeImage
             src={e.imageUrl}
             alt={`Flyer de ${e.title}`}
             fill
             sizes="19rem"
             className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
+            fallback={<FlyerPlaceholder title={e.title} />}
           />
         ) : (
-          <div className="flex h-full flex-col justify-end bg-gradient-to-br from-primary/25 via-background to-background p-6">
-            <p className="font-heading text-2xl font-semibold leading-tight text-foreground">{e.title}</p>
-          </div>
+          <FlyerPlaceholder title={e.title} />
         )}
       </div>
       <div className="mt-4 flex gap-4">

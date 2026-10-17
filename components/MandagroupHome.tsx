@@ -23,7 +23,8 @@ import { BRAND_PAGE_PATH } from "@/lib/mandagroup-pages";
 
 
 
-import { EventCard, clp, dateParts, startTime, untilDate } from "@/components/mandagroup/EventCard";
+import { EventCard, FlyerPlaceholder, clp, dateParts, startTime, untilDate } from "@/components/mandagroup/EventCard";
+import { SafeImage } from "@/components/mandagroup/SafeImage";
 
 // Home a medida de Manda Group: no pasa por components/HomeContent.tsx porque
 // el contenido central es dinámico (cartelera desde Vesti + cargada a mano en
@@ -156,7 +157,8 @@ export async function MandagroupHome() {
                       rel="noreferrer"
                       className="group relative block aspect-[4/5] overflow-hidden rounded-[1.25rem] transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1"
                     >
-                      <Image
+                      <SafeImage
+                        fallback={<FlyerPlaceholder title={e.title} />}
                         src={e.imageUrl!}
                         alt={`Flyer de ${e.title}`}
                         fill
@@ -234,7 +236,8 @@ export async function MandagroupHome() {
                   >
                     {p.imageUrl && (
                       <div className="relative aspect-[4/5] w-28 shrink-0 overflow-hidden rounded-xl sm:w-36">
-                        <Image
+                        <SafeImage
+                          fallback={<FlyerPlaceholder title={p.title} size="sm" />}
                           src={p.imageUrl}
                           alt={`Flyer de ${p.title}`}
                           fill
@@ -514,7 +517,7 @@ function BrandTile({
     <Reveal delay={delay} className={`group relative min-h-[16rem] overflow-hidden rounded-2xl ring-1 ring-foreground/10 ${className}`}>
       <a href={BRAND_PAGE_PATH[brand.key]} className="absolute inset-0 block">
         {image ? (
-          <Image
+          <SafeImage
             src={image}
             alt={brand.name}
             fill
@@ -557,7 +560,7 @@ function InstagramTile({ post, delay }: { post: InstagramMedia & { handle: strin
         rel="noreferrer"
         className="group relative block aspect-square overflow-hidden rounded-2xl bg-foreground/[0.05] ring-1 ring-foreground/10"
       >
-        <Image
+        <SafeImage
           src={post.mediaUrl}
           alt={post.caption ? post.caption.slice(0, 120) : `Publicación de @${post.handle}`}
           fill

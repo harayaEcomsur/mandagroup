@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { SafeImage } from "@/components/mandagroup/SafeImage";
 import { ArrowUpRight, MapPin, QrCode } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/mandagroup/Reveal";
@@ -141,7 +141,7 @@ export async function BrandLanding({ page }: { page: BrandPage }) {
           <Reveal mode="load" delay={150} className="lg:col-span-5">
             <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-foreground/[0.05] ring-1 ring-foreground/10">
               {image ? (
-                <Image src={image} alt={page.name} fill priority sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
+                <SafeImage src={image} alt={page.name} fill priority sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center bg-gradient-to-br from-foreground/[0.08] via-background to-primary/10">
                   {/* eslint-disable-next-line @next/next/no-img-element -- logo local */}

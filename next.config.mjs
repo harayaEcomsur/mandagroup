@@ -42,6 +42,10 @@ const nextConfig = {
     // justo el "tarda en aparecer". 1 día de caché del optimizador: una vez
     // publicados, esos archivos no cambian.
     minimumCacheTTL: 86400,
+    // La cuota del optimizador de Vercel se agotó (402 → flyers rotos): las
+    // imágenes externas se redimensionan en /api/img. Ver lib/image-loader.ts.
+    loader: "custom",
+    loaderFile: "./lib/image-loader.ts",
   },
 };
 
