@@ -78,9 +78,12 @@ export function ChatWidget({
   }
 
   return (
-    <div className={`fixed right-4 z-50 ${stacked ? "bottom-24" : "bottom-4"} sm:right-6`}>
+    // En mobile, con WhatsApp, los dos botones van en fila abajo a la derecha
+    // (más chicos) en vez de apilados: apilados tapaban el contenido del hero.
+    // El panel del chat se ancla a la pantalla para no salirse por la izquierda.
+    <div className={`fixed z-50 ${stacked ? "bottom-4 right-[4.5rem] sm:bottom-24 sm:right-6" : "bottom-4 right-4 sm:right-6"}`}>
       {open && (
-        <div className="mb-3 flex h-[28rem] w-[20rem] flex-col overflow-hidden rounded-2xl border border-black/10 bg-background shadow-2xl sm:w-[22rem]">
+        <div className={`flex h-[28rem] flex-col ${stacked ? "fixed inset-x-4 bottom-[4.5rem] sm:static sm:mb-3 sm:w-[22rem]" : "mb-3 w-[20rem] sm:w-[22rem]"} overflow-hidden rounded-2xl border border-black/10 bg-background shadow-2xl`}>
           <div className="flex items-center justify-between bg-primary px-4 py-3 text-white">
             <span className="font-heading text-sm font-semibold">{businessName}</span>
             <button onClick={() => setOpen(false)} aria-label="Cerrar chat">
@@ -152,7 +155,7 @@ export function ChatWidget({
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Cerrar chat" : "Abrir chat"}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform active:scale-95"
+        className={`flex items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform active:scale-95 ${stacked ? "h-12 w-12 sm:h-14 sm:w-14" : "h-14 w-14"}`}
       >
         {open ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
