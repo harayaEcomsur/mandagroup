@@ -3,6 +3,7 @@ import { clientConfig } from "@/config/client.config";
 import { Header } from "@/components/layout/Header";
 import { buildPrivacySections } from "@/lib/privacy-content";
 import { ArcoRequestForm } from "@/components/privacy/ArcoRequestForm";
+import { ConsentToggle } from "@/components/analytics/ConsentToggle";
 
 export const metadata: Metadata = {
   title: `Política de privacidad — ${clientConfig.meta.businessName}`,
@@ -38,6 +39,13 @@ export default function PrivacidadPage() {
               </section>
             ))}
           </div>
+
+          {(process.env.NEXT_PUBLIC_GA_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID) && (
+            <div className="mt-10">
+              <h2 className="mb-3 font-heading text-lg font-semibold text-foreground">Medición del sitio</h2>
+              <ConsentToggle />
+            </div>
+          )}
 
           <div className="mt-10">
             <h2 className="mb-3 font-heading text-lg font-semibold text-foreground">Solicitar mis datos</h2>

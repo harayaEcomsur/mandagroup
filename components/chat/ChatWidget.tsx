@@ -153,7 +153,10 @@ export function ChatWidget({
         </div>
       )}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open) window.gtag?.("event", "open_chat", { from_page: window.location.pathname });
+          setOpen((v) => !v);
+        }}
         aria-label={open ? "Cerrar chat" : "Abrir chat"}
         className={`flex items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform active:scale-95 ${stacked ? "h-12 w-12 sm:h-14 sm:w-14" : "h-14 w-14"}`}
       >

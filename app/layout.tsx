@@ -4,6 +4,7 @@ import { getFontVariables } from "@/lib/fonts";
 import { paletteToCssVars } from "@/lib/theme";
 import { buildMetadata, buildLocalBusinessJsonLd } from "@/lib/seo";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata: Metadata = buildMetadata(clientConfig);
@@ -20,6 +21,8 @@ const metaPixels = {
     costa: process.env.NEXT_PUBLIC_META_PIXEL_COSTA || undefined,
   },
 };
+// Google Analytics 4 (opcional, ver components/analytics/GoogleAnalytics).
+const gaId = process.env.NEXT_PUBLIC_GA_ID || undefined;
 const hasMetaPixel = Boolean(metaPixels.group || Object.values(metaPixels.brands).some(Boolean));
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body>
         {children}
+        {gaId && <GoogleAnalytics id={gaId} />}
         {hasMetaPixel && <MetaPixel pixels={metaPixels} />}
         {!clientConfig.seo.jsonLdInPage && (
           <script

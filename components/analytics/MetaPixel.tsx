@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PIXEL_BRANDS, type PixelBrand } from "@/lib/mandagroup-pixel";
+import { CONSENT_EVENT, isCarta, isInternal, readConsent, saveConsent, type Consent } from "@/components/analytics/consent";
 
 export interface MetaPixels {
   group?: string;
@@ -30,30 +31,6 @@ declare global {
   interface Window {
     fbq?: (...args: unknown[]) => void;
     _fbq?: unknown;
-  }
-}
-
-const CONSENT_KEY = "metaPixelConsent"; // "granted" | "denied"
-
-// Paneles internos: no tiene sentido medir (ni mostrar el aviso) ahí.
-function isInternal(pathname: string): boolean {
-  return pathname.includes("/admin") || pathname.startsWith("/embed");
-}
-
-function readConsent(): string | null {
-  try {
-    return localStorage.getItem(CONSENT_KEY);
-  } catch {
-    // Modo privado / storage bloqueado: se vuelve a preguntar en cada visita.
-    return null;
-  }
-}
-
-function saveConsent(value: "granted" | "denied") {
-  try {
-    localStorage.setItem(CONSENT_KEY, value);
-  } catch {
-    // Sin storage la decisión vale solo para esta visita.
   }
 }
 
@@ -92,8 +69,6 @@ function trackAction(p: MetaPixels, brand: string | undefined, event: string, pa
   }
 }
 
-const isCarta = (href: string) => href.includes("menu.fu.do") || /\/cartas\/|\.pdf($|\?)/i.test(href);
-
 export function MetaPixel({ pixels }: { pixels: MetaPixels }) {
   const pathname = usePathname() ?? "/";
   const [consent, setConsent] = useState<string | null>(null);
@@ -102,6 +77,10 @@ export function MetaPixel({ pixels }: { pixels: MetaPixels }) {
   useEffect(() => {
     setConsent(readConsent());
     setReady(true);
+    // La decisión también puede cambiar desde /privacidad.
+    const onConsent = (e: Event) => setConsent((e as CustomEvent<Consent>).detail);
+    window.addEventListener(CONSENT_EVENT, onConsent);
+    return () => window.removeEventListener(CONSENT_EVENT, onConsent);
   }, []);
 
   const active = consent === "granted" && !isInternal(pathname);
@@ -147,26 +126,21 @@ export function MetaPixel({ pixels }: { pixels: MetaPixels }) {
     >
       <p>
         Usamos el Pixel de Meta para medir qué publicaciones te trajeron y mostrarte nuestros eventos en Instagram y
-        Facebook. Solo se activa si aceptas.{" "}
+        Facebook (solo si aceptas), y Google Analytics para saber cómo se usa el sitio (si rechazas, deja de usar
+        cookies).{" "}
         <a href="/privacidad" className="underline underline-offset-2">
           Más info
         </a>
       </p>
       <div className="mt-3 flex justify-end gap-2">
         <button
-          onClick={() => {
-            saveConsent("denied");
-            setConsent("denied");
-          }}
+          onClick={() => saveConsent("denied")}
           className="rounded-lg border border-foreground/20 px-4 py-2 font-medium text-foreground hover:bg-foreground/5"
         >
           Rechazar
         </button>
         <button
-          onClick={() => {
-            saveConsent("granted");
-            setConsent("granted");
-          }}
+          onClick={() => saveConsent("granted")}
           className="rounded-lg bg-primary px-4 py-2 font-semibold text-background hover:opacity-90"
         >
           Aceptar

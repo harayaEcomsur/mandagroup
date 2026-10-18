@@ -42,7 +42,10 @@ export function buildPrivacySections(): PrivacySection[] {
     ],
   });
 
-  const destinatarios = ["No vendemos tus datos ni los compartimos con terceros para fines de marketing, salvo lo que se indica a continuación sobre el Pixel de Meta (si aplica)."];
+  const destinatarios = ["No vendemos tus datos ni los compartimos con terceros para fines de marketing, salvo lo que se indica a continuación sobre Google Analytics y el Pixel de Meta (si aplica)."];
+  if (process.env.NEXT_PUBLIC_GA_ID) {
+    destinatarios.push("Usamos Google Analytics para saber cuántas personas visitan el sitio, desde dónde llegan (por ejemplo, Google, Instagram o el código QR de un local) y qué hacen en él: páginas vistas, cartas abiertas y clics a comprar entradas, reservar o escribirnos. Lo usamos solo para estadísticas, sin fines publicitarios ni para identificarte. Puedes desactivarlo cuando quieras con el botón al final de esta página o rechazando el aviso de cookies.");
+  }
   const metaPixel = [
     process.env.NEXT_PUBLIC_META_PIXEL_ID,
     process.env.NEXT_PUBLIC_META_PIXEL_RENACA,
