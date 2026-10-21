@@ -119,11 +119,11 @@ export async function MandagroupHome() {
                 href={mandaCarta}
                 target="_blank"
                 rel="noreferrer"
-                className="group inline-flex items-center gap-3 rounded-full bg-primary py-2 pl-6 pr-2 text-sm font-semibold text-background transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
+                className="group inline-flex items-center gap-3 rounded-full bg-primary py-2.5 pl-7 pr-2.5 text-base font-semibold text-background shadow-lg shadow-primary/25 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
               >
                 Ver carta Manda
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                  <ArrowUpRight size={16} strokeWidth={2} />
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                  <ArrowUpRight size={18} strokeWidth={2} />
                 </span>
               </a>
               <a
