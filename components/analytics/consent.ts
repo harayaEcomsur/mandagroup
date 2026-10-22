@@ -33,5 +33,5 @@ export function saveConsent(value: Consent) {
   window.dispatchEvent(new CustomEvent<Consent>(CONSENT_EVENT, { detail: value }));
 }
 
-// Cartas: PDFs propios (/cartas/archivo/...) o la carta online de Costa Sushi.
-export const isCarta = (href: string) => href.includes("menu.fu.do") || /\/cartas\/|\.pdf($|\?)/i.test(href);
+// Cartas: el lector (/carta/[id]), PDFs propios (/cartas/archivo/...) o la carta online de Costa Sushi.
+export const isCarta = (href: string) => href.includes("menu.fu.do") || /\/cartas?\/[^/?#]|\.pdf($|\?)/i.test(href);

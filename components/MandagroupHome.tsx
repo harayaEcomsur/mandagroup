@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { clientConfig } from "@/config/client.config";
 import { Container } from "@/components/ui/Container";
@@ -38,8 +39,11 @@ export async function MandagroupHome() {
     listLocales(),
     listCartas(),
   ]);
-  // Botón "Ver carta Manda" (mobile): directo al archivo, sin pasar por /carta.
-  const mandaCarta = cartas.find((c) => c.id === "manda")?.source.url ?? "/cmanda.pdf";
+  // Botones de carta (mobile): uno por local de Manda, al lector a pantalla
+  // completa (/carta/[id]: zoom + próximas fechas).
+  const mandaCartas = cartas
+    .filter((c) => c.brand === "manda" && c.showOnSite && c.source.type === "file")
+    .map((c) => ({ href: `/carta/${c.id}`, label: c.title.replace(/^Carta Manda\s*/i, "").replace(/ del Mar$/, "") || "Manda" }));
   // contact.whatsapp = WhatsApp de CONSULTAS (respuestas automáticas), no de
   // reservas. Reservas: Reñaca por su WhatsApp, Viña por Instagram.
   const centralWa = contact.whatsapp ? buildWhatsAppLink(contact.whatsapp, contact.whatsappPrefilledMessage) : null;
@@ -95,8 +99,8 @@ export async function MandagroupHome() {
         <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-background to-transparent" />
         {/* Mobile: arriba y compacto, para que "Ver carta Manda" quede a la vista
             al llegar desde el QR de la mesa sin tener que bajar. */}
-        <Container className="grid items-start gap-12 pb-14 pt-6 md:min-h-[78dvh] md:items-center md:py-20 lg:grid-cols-12 lg:py-24">
-          <Reveal mode="load" className="lg:col-span-8">
+        <Container className="grid grid-cols-1 items-start gap-12 pb-14 pt-6 md:min-h-[78dvh] md:items-center md:py-20 lg:grid-cols-12 lg:py-24">
+          <Reveal mode="load" className="min-w-0 lg:col-span-8">
             {/* Quien llega suele estar ya en Manda (QR de la mesa) o buscó un panorama:
                 el gancho es que Manda es la puerta a todo el grupo. Las palabras
                 que se buscan (clubes, fiestas, sushi, parrilla, comunas) van en la
@@ -107,32 +111,37 @@ export async function MandagroupHome() {
             <h1 className="mt-4 max-w-[26ch] text-balance font-heading text-4xl font-semibold leading-[1.04] tracking-tight text-foreground sm:text-5xl md:mt-5 md:text-6xl lg:text-[3.6rem]">
               Manda es solo el comienzo de tu noche en la costa.
             </h1>
-            <p className="mt-4 max-w-[52ch] text-base leading-relaxed text-foreground/70 md:mt-6 md:text-lg">
-              Detrás de Manda hay un grupo entero por descubrir: los clubes de Reñaca y Viña del Mar, las fiestas Costa
-              Nights, el sushi de Costa Sushi en Reñaca, Valparaíso y Curauma, y la parrilla de Carbón. ¿Ya los probaste
-              todos?
-            </p>
             {/* En mobile manda la carta: el QR de las mesas de Manda trae aquí
-                (antes llevaba al sitio antiguo, con la carta como lo primero). */}
-            <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4 md:hidden">
-              <a
-                href={mandaCarta}
-                target="_blank"
-                rel="noreferrer"
-                className="group inline-flex items-center gap-3 rounded-full bg-primary py-2.5 pl-7 pr-2.5 text-base font-semibold text-background shadow-lg shadow-primary/25 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-[0.98]"
-              >
-                Ver carta Manda
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background/15 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
-                  <ArrowUpRight size={18} strokeWidth={2} />
-                </span>
-              </a>
+                (antes llevaba al sitio antiguo, con la carta como lo primero). Va antes de
+                la bajada para que se vea sin bajar, incluso en pantallas de 320 px. */}
+            <div className="mt-6 md:hidden">
+              <p className="text-sm font-semibold text-foreground/80">Ver carta Manda</p>
+              <div className={`mt-2.5 grid gap-3 ${mandaCartas.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                {(mandaCartas.length ? mandaCartas : [{ href: "/carta", label: "Ver carta" }]).map((c) => (
+                  <Link
+                    key={c.href}
+                    href={c.href}
+                    className="group flex items-center justify-between gap-2 rounded-full bg-primary py-2.5 pl-5 pr-2.5 text-base font-semibold text-background shadow-lg shadow-primary/25 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98]"
+                  >
+                    {c.label}
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background/15">
+                      <ArrowUpRight size={18} strokeWidth={2} />
+                    </span>
+                  </Link>
+                ))}
+              </div>
               <a
                 href="#eventos"
-                className="text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
+                className="mt-5 inline-block text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
               >
                 Ver cartelera
               </a>
             </div>
+            <p className="mt-6 max-w-[52ch] text-base leading-relaxed text-foreground/70 md:text-lg">
+              Detrás de Manda hay un grupo entero por descubrir: los clubes de Reñaca y Viña del Mar, las fiestas Costa
+              Nights, el sushi de Costa Sushi en Reñaca, Valparaíso y Curauma, y la parrilla de Carbón. ¿Ya los probaste
+              todos?
+            </p>
             <div className="mt-10 hidden flex-wrap items-center gap-x-8 gap-y-4 md:flex">
               <a
                 href="#eventos"

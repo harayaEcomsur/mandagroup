@@ -32,7 +32,12 @@ export function CartaView({ carta }: { carta: Carta }) {
           <ArrowUpRight size={15} strokeWidth={2} />
         </a>
       </Reveal>
-      <div className="mt-8 flex flex-col gap-4">
+      {source.pages?.length ? (
+        <a href={`/carta/${carta.id}`} className="mt-3 inline-block text-sm text-foreground/60 underline underline-offset-4 hover:text-primary">
+          Abrir en pantalla completa, con zoom
+        </a>
+      ) : null}
+      <div className={`mt-8 flex flex-col ${source.continuous ? "overflow-hidden rounded-2xl ring-1 ring-foreground/10" : "gap-4"}`}>
         {source.pages?.length ? (
           source.pages.map((p, i) => (
             <Image
@@ -45,7 +50,7 @@ export function CartaView({ carta }: { carta: Carta }) {
               // Ya son WebP optimizados a 1200 px: pasarlos por el optimizador
               // solo agrega espera (la de Manda mide 6.882 px de alto).
               unoptimized
-              className="h-auto w-full rounded-2xl ring-1 ring-foreground/10"
+              className={source.continuous ? "block h-auto w-full" : "h-auto w-full rounded-2xl ring-1 ring-foreground/10"}
             />
           ))
         ) : (

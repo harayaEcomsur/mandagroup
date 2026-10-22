@@ -55,6 +55,9 @@ export type CartaSource =
       // Páginas ya convertidas a WebP (solo las cartas migradas). Si no hay,
       // el sitio dibuja el PDF en el navegador (components/mandagroup/PdfViewer).
       pages?: { src: string; width: number; height: number }[];
+      // Las páginas son tramos de una sola imagen larga (cartas diseñadas como
+      // un póster vertical): se muestran pegadas, sin espacio entre ellas.
+      continuous?: boolean;
     }
   | { type: "url"; url: string };
 
@@ -79,6 +82,7 @@ export interface Carta {
 
 const LOCALES_KEY = "mandagroup_locales";
 const CARTAS_KEY = "mandagroup_cartas";
+const CARTAS_MIGRATIONS_KEY = "mandagroup_cartas_migrations";
 
 const archived = (f: string) => `/cartas/archivo/${f}`;
 
@@ -152,11 +156,34 @@ export const DEFAULT_LOCALES: Local[] = [
 
 const T = "2026-10-06T00:00:00.000Z";
 
+// Carta de Manda Reñaca (oct. 2026): el PDF original pesaba 64 MB (Illustrator,
+// una sola página de 1920×12187 pt). Se publica en 5 tramos WebP de 1600 px
+// (~1 MB en total) y un PDF liviano para descargar.
+const MANDA_RENACA: Carta = {
+  id: "manda-renaca",
+  brand: "manda",
+  title: "Carta Manda Reñaca",
+  description: "Raw bar, hamburguesas, pizzas, tablas para compartir y coctelería.",
+  source: {
+    type: "file",
+    url: archived("manda-renaca.pdf"),
+    sizeBytes: 1547692,
+    pages: [2032, 2032, 2032, 2032, 2028].map((height, i) => ({ src: `/cartas/manda-renaca-${i + 1}.webp`, width: 1600, height })),
+    continuous: true,
+  },
+  showOnSite: true,
+  onCarbonPage: false,
+  aliases: [],
+  order: -1,
+  updatedAt: "2026-10-22T00:00:00.000Z",
+};
+
 export const DEFAULT_CARTAS: Carta[] = [
+  MANDA_RENACA,
   {
     id: "manda",
     brand: "manda",
-    title: "Carta Manda",
+    title: "Carta Manda Viña del Mar",
     description: "Tablas, quesadillas, empanaditas y coctelería.",
     source: {
       type: "file",
@@ -270,13 +297,15 @@ export const DEFAULT_CARTAS: Carta[] = [
 ];
 
 // Memoria (dev sin DATABASE_URL): mismo patrón que lib/mandagroup-store.ts.
-const g = globalThis as unknown as { __mandagroupCatalog?: { locales: Local[] | null; cartas: Carta[] | null } };
+const g = globalThis as unknown as {
+  __mandagroupCatalog?: { locales: Local[] | null; cartas: Carta[] | null; migrations: string[] | null };
+};
 function mem() {
-  if (!g.__mandagroupCatalog) g.__mandagroupCatalog = { locales: null, cartas: null };
+  if (!g.__mandagroupCatalog) g.__mandagroupCatalog = { locales: null, cartas: null, migrations: null };
   return g.__mandagroupCatalog;
 }
 
-async function readDoc<T>(key: string, memKey: "locales" | "cartas"): Promise<T | null> {
+async function readDoc<T>(key: string, memKey: "locales" | "cartas" | "migrations"): Promise<T | null> {
   return withDb(
     async () => {
       const sql = db();
@@ -287,7 +316,7 @@ async function readDoc<T>(key: string, memKey: "locales" | "cartas"): Promise<T 
   );
 }
 
-async function writeDoc(key: string, memKey: "locales" | "cartas", value: Local[] | Carta[]): Promise<void> {
+async function writeDoc(key: string, memKey: "locales" | "cartas" | "migrations", value: Local[] | Carta[] | string[]): Promise<void> {
   await withDb(
     async () => {
       const sql = db();
@@ -319,9 +348,29 @@ export async function saveLocales(locales: Local[]): Promise<void> {
   await writeDoc(LOCALES_KEY, "locales", locales);
 }
 
+// Cambios de catálogo que deben llegar también a las cartas ya guardadas desde
+// el panel (allí no aplican los DEFAULT_CARTAS). Cada uno corre una sola vez:
+// si después se edita o se borra en el panel, no vuelve.
+const CARTA_MIGRATIONS: { id: string; apply: (list: Carta[]) => Carta[] }[] = [
+  {
+    id: "2026-10-manda-renaca",
+    apply: (list) =>
+      (list.some((c) => c.id === MANDA_RENACA.id) ? list : [MANDA_RENACA, ...list]).map((c) =>
+        c.id === "manda" && c.title === "Carta Manda" ? { ...c, title: "Carta Manda Viña del Mar" } : c
+      ),
+  },
+];
+
 export async function listCartas(): Promise<Carta[]> {
   const saved = await readDoc<Carta[]>(CARTAS_KEY, "cartas");
-  return byOrder(saved ?? DEFAULT_CARTAS);
+  if (!saved) return byOrder(DEFAULT_CARTAS);
+  const applied = (await readDoc<string[]>(CARTAS_MIGRATIONS_KEY, "migrations")) ?? [];
+  const pending = CARTA_MIGRATIONS.filter((m) => !applied.includes(m.id));
+  if (pending.length === 0) return byOrder(saved);
+  const migrated = pending.reduce((list, m) => m.apply(list), saved);
+  await writeDoc(CARTAS_KEY, "cartas", migrated);
+  await writeDoc(CARTAS_MIGRATIONS_KEY, "migrations", [...applied, ...pending.map((m) => m.id)]);
+  return byOrder(migrated);
 }
 
 export async function saveCartas(cartas: Carta[]): Promise<void> {
