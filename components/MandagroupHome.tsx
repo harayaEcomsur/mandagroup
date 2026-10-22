@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, MapPin } from "lucide-react";
+import { ArrowDown, ArrowUpRight, BookOpen, MapPin } from "lucide-react";
 import { clientConfig } from "@/config/client.config";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/mandagroup/Reveal";
@@ -142,9 +142,10 @@ export async function MandagroupHome() {
               </div>
               <a
                 href="#eventos"
-                className="mt-5 inline-block text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
+                className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline decoration-foreground/30 underline-offset-8 transition-colors hover:decoration-primary"
               >
-                Ver cartelera
+                Mira las fiestas y shows que vienen
+                <ArrowDown size={15} strokeWidth={2} className="shrink-0 text-primary" aria-hidden />
               </a>
             </div>
             <p className="mt-6 max-w-[52ch] text-base leading-relaxed text-foreground/70 md:text-lg">
