@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, MapPin } from "lucide-react";
+import { ArrowUpRight, BookOpen, MapPin } from "lucide-react";
 import { clientConfig } from "@/config/client.config";
 import { Container } from "@/components/ui/Container";
 import { Reveal } from "@/components/mandagroup/Reveal";
@@ -115,15 +115,25 @@ export async function MandagroupHome() {
                 (antes llevaba al sitio antiguo, con la carta como lo primero). Va antes de
                 la bajada para que se vea sin bajar, incluso en pantallas de 320 px. */}
             <div className="mt-6 md:hidden">
-              <p className="text-sm font-semibold text-foreground/80">Ver carta Manda</p>
-              <div className={`mt-2.5 grid gap-3 ${mandaCartas.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-                {(mandaCartas.length ? mandaCartas : [{ href: "/carta", label: "Ver carta" }]).map((c) => (
+              {/* Encabezado claramente más grande que la bajada (jerarquía), y cada
+                  botón dice "Carta" + el local: se entiende sin leer el resto. */}
+              <p className="flex items-center gap-2.5 font-heading text-xl font-semibold text-foreground">
+                <BookOpen size={22} strokeWidth={2} className="shrink-0 text-primary" aria-hidden />
+                Ver carta Manda
+              </p>
+              <p className="mt-1 text-sm text-foreground/60">Elige tu local:</p>
+              <div className={`mt-3 grid gap-3 ${mandaCartas.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+                {(mandaCartas.length ? mandaCartas : [{ href: "/carta", label: "Manda" }]).map((c) => (
                   <Link
                     key={c.href}
                     href={c.href}
-                    className="group flex items-center justify-between gap-2 rounded-full bg-primary py-2.5 pl-5 pr-2.5 text-base font-semibold text-background shadow-lg shadow-primary/25 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98]"
+                    aria-label={`Ver carta Manda ${c.label}`}
+                    className="group flex min-h-[3.75rem] items-center justify-between gap-2 rounded-2xl bg-primary py-2.5 pl-4 pr-2.5 text-background shadow-lg shadow-primary/25 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-[0.98]"
                   >
-                    {c.label}
+                    <span className="min-w-0 leading-tight">
+                      <span className="block text-xs font-semibold uppercase tracking-[0.14em] opacity-70">Carta</span>
+                      <span className="block truncate text-lg font-semibold">{c.label}</span>
+                    </span>
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background/15">
                       <ArrowUpRight size={18} strokeWidth={2} />
                     </span>
