@@ -9,7 +9,6 @@ import { listActiveEvents, type MandagroupEvent } from "@/lib/mandagroup-store";
 import { listCartas, listLocales, reservationLink } from "@/lib/mandagroup-catalog";
 import { eventPixelBrand, localPixelBrand } from "@/lib/mandagroup-pixel";
 import { getAccountMedia, type InstagramMedia } from "@/lib/instagram";
-import { vestiCompanyUrl } from "@/lib/vesti";
 import {
   BRANDS,
   buildFaq,
@@ -307,7 +306,7 @@ export async function MandagroupHome() {
         {/* Ancla heredada: links viejos a /#servicios siguen llegando acá. */}
         <span id="servicios" className="block scroll-mt-24" aria-hidden />
         <Container>
-          <Reveal className="flex flex-wrap items-end justify-between gap-6">
+          <Reveal>
             <div>
               <h2 className="font-heading text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
                 Próximas fiestas
@@ -316,20 +315,6 @@ export async function MandagroupHome() {
                 Manda Reñaca, Manda Viña del Mar, las fiestas Costa Nights y los shows de Eventos &amp; Stand Up. Las
                 entradas se compran en Vesti.
               </p>
-            </div>
-            <div className="flex gap-5 text-sm font-semibold">
-              <a href={vestiCompanyUrl("renaca")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
-                Vesti Reñaca
-              </a>
-              <a href={vestiCompanyUrl("vina")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
-                Vesti Viña
-              </a>
-              <a href={vestiCompanyUrl("costa")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
-                Vesti Costa Nights
-              </a>
-              <a href={vestiCompanyUrl("standup")} target="_blank" rel="noreferrer" className="text-foreground/70 hover:text-primary">
-                Vesti Stand Up
-              </a>
             </div>
           </Reveal>
         </Container>
