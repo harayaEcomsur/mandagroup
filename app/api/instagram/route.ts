@@ -253,15 +253,26 @@ export async function POST(req: Request) {
 
   if (!configured) return Response.json({ ok: true, note: "instagram no configurado" });
 
-  try {
-    // Estructura estándar del webhook: entry[].messaging[]
-    const messaging = (payload as any)?.entry?.[0]?.messaging?.[0];
+  // Diagnóstico: ver exactamente qué llega, para saber en qué punto se corta
+  // si no hay respuesta (payload inesperado, echo, etc.).
+  console.log("[instagram webhook] payload recibido", JSON.stringify(payload).slice(0, 2000));
 
-    // Diagnóstico temporal: ver exactamente qué llega, para saber en qué
-    // punto se corta si no hay respuesta (payload inesperado, echo, etc.).
-    console.log("[instagram webhook] payload recibido", JSON.stringify(payload).slice(0, 2000));
+  // Meta puede agrupar varios eventos en un mismo POST (varias entradas y/o
+  // varios mensajes seguidos): antes solo se leía el primero y el resto se
+  // perdía sin respuesta. Se procesan todos, en orden.
+  const events: any[] = ((payload as any)?.entry ?? []).flatMap((e: any) => e?.messaging ?? []);
+  for (const messaging of events) {
+    try {
+      await handleMessaging(messaging);
+    } catch (error) {
+      console.error("[instagram webhook]", error);
+    }
+  }
+  return Response.json({ ok: true });
+}
 
-    if (!messaging) return Response.json({ ok: true });
+async function handleMessaging(messaging: any): Promise<void> {
+  {
 
     // Eco de un mensaje SALIENTE de la cuenta (nuestro bot o una persona del
     // equipo escribiendo a mano desde la app de Instagram — Meta manda este
@@ -277,7 +288,7 @@ export async function POST(req: Request) {
         console.log("[instagram webhook] eco ajeno — una persona ya está respondiendo, se pausa el bot", { customerId });
         await pauseForHuman(customerId);
       }
-      return Response.json({ ok: true });
+      return;
     }
 
     // Mención o respuesta a una historia: no es una pregunta real, y
@@ -288,22 +299,22 @@ export async function POST(req: Request) {
     const isStoryReply = Boolean(messaging.message?.reply_to?.story);
     if (isStoryMention || isStoryReply) {
       console.log("[instagram webhook] descartado: mención/respuesta a historia", { isStoryMention, isStoryReply });
-      return Response.json({ ok: true });
+      return;
     }
 
     // Reacciones, "seen" y tipos no soportados en v1 (solo texto).
     if (!messaging.message?.text) {
       console.log("[instagram webhook] descartado: sin texto", { hasMessaging: !!messaging });
-      return Response.json({ ok: true });
+      return;
     }
 
     const from: string = messaging.sender?.id;
     const userText: string = messaging.message.text;
-    if (!from) return Response.json({ ok: true });
+    if (!from) return;
 
     if (await isHumanPaused(from)) {
       console.log("[instagram webhook] hilo pausado por toma de control humano, no se responde", { from });
-      return Response.json({ ok: true, note: "pausado por humano" });
+      return;
     }
 
     // `recipient.id` es la cuenta de Instagram que recibió el mensaje — con
@@ -315,7 +326,7 @@ export async function POST(req: Request) {
     // que el equipo la atienda a mano, sin el asistente de por medio.
     if (scope?.enabled === false) {
       console.log("[instagram webhook] cuenta desactivada, no se responde", { igAccountId });
-      return Response.json({ ok: true, note: "cuenta desactivada" });
+      return;
     }
 
     const token = resolveInstagramToken(igAccountId);
@@ -375,10 +386,8 @@ export async function POST(req: Request) {
       }
       await appendHistory(from, { role: "user", content: userText }, { role: "assistant", content: text.trim() });
       logChat({ canal: "instagram", userText, assistantText: text.trim() });
+    } else {
+      console.warn("[instagram webhook] el modelo no devolvió texto, no se responde", { from, igAccountId });
     }
-  } catch (error) {
-    console.error("[instagram webhook]", error);
   }
-
-  return Response.json({ ok: true });
 }
