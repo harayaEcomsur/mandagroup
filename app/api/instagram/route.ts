@@ -274,6 +274,14 @@ export async function POST(req: Request) {
   return Response.json({ ok: true });
 }
 
+// Texto con contenido (2+ palabras, o una pregunta como "Precio?"): distingue
+// una consulta de una reacción a una historia ("🔥🔥", "jajaja", "wena").
+function hasRealText(text: string | undefined): boolean {
+  const words = (text ?? "").match(/\p{L}{2,}/gu) ?? [];
+  if (words.length === 0 || /^(ja|je|ji)+$/i.test(words.join(""))) return false;
+  return words.length >= 2 || (text ?? "").includes("?");
+}
+
 // Tipo legible del adjunto ("audio", "imagen"…) para la bandeja del panel.
 function attachmentKind(messaging: any): string {
   const types: string[] = (messaging.message?.attachments ?? []).map((a: { type?: string }) => a?.type ?? "otro");
@@ -334,7 +342,11 @@ async function handleMessaging(messaging: any): Promise<void> {
     ? messaging.message.attachments.some((a: { type?: string }) => a?.type === "story_mention")
     : false;
   const isStoryReply = Boolean(messaging.message.reply_to?.story);
-  if (isStoryMention || isStoryReply) {
+  // Muchas consultas reales llegan respondiendo una historia ("Hola, para
+  // reserva de cumpleaños?"). Esas se responden; solo se ignoran las
+  // reacciones (emojis, "🔥", "jaja") a una historia, sin una pregunta.
+  const storyReplyWithQuestion = isStoryReply && hasRealText(messaging.message.text);
+  if (isStoryMention || (isStoryReply && !storyReplyWithQuestion)) {
     console.log("[instagram webhook] descartado: mención/respuesta a historia", { isStoryMention, isStoryReply });
     await logIgEvent({
       ...base,
@@ -384,6 +396,9 @@ async function handleMessaging(messaging: any): Promise<void> {
       system:
         buildSystemPrompt() +
         "\n\nEstás respondiendo por Instagram Direct: sé especialmente breve (2-4 frases), sin markdown ni asteriscos." +
+        (storyReplyWithQuestion
+          ? " Este mensaje es una respuesta a una historia de la cuenta (no puedes ver la historia): responde la consulta y, si depende de lo que mostraba la historia, pide que te cuente a qué se refiere." 
+          : "") +
         " Si el mensaje del cliente es ambiguo o te falta un dato para ayudarlo, pide que te lo aclare en vez de adivinar." +
         " Si de verdad no sabes algo (está fuera de lo que puedes resolver: reservas, entradas, dress code, ubicación, horarios), dilo con naturalidad y dile que alguien del equipo le responderá por este mismo chat — nunca inventes ni adivines una respuesta." +
         (senderName
