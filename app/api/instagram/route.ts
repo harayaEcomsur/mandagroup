@@ -9,6 +9,7 @@ import { buildStoreTools } from "@/lib/store-tools";
 import { buildMandagroupTools } from "@/lib/mandagroup-tools";
 import { getInstagramScope, type InstagramScope } from "@/lib/mandagroup-store";
 import { logChat } from "@/lib/chat-log";
+import { logIgEvent } from "@/lib/ig-inbox-log";
 import {
   getHistory,
   appendHistory,
@@ -119,7 +120,11 @@ async function resolveInstagramSenderName(senderId: string, token: string | unde
 // `undefined` si falló) — se usa para que recordBotMessageId() lo marque como
 // "nuestro" y así un eco de ESTE mensaje no se confunda con una persona real
 // respondiendo a mano (ver detección de toma de control humano más abajo).
-async function sendInstagramText(recipientId: string, body: string, token: string | undefined): Promise<string | undefined> {
+async function sendInstagramText(
+  recipientId: string,
+  body: string,
+  token: string | undefined,
+): Promise<{ mid?: string; error?: string }> {
   const res = await fetch(`${GRAPH_URL}/me/messages?access_token=${token}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -134,14 +139,12 @@ async function sendInstagramText(recipientId: string, body: string, token: strin
   // (token vencido, permiso faltante, cuenta no autorizada) y antes no quedaba
   // registro de eso en ningún lado.
   if (!res.ok) {
-    console.warn("[instagram webhook] sendInstagramText falló", {
-      status: res.status,
-      body: await res.text().catch(() => "(no se pudo leer)"),
-    });
-    return undefined;
+    const errorBody = await res.text().catch(() => "(no se pudo leer)");
+    console.warn("[instagram webhook] sendInstagramText falló", { status: res.status, body: errorBody });
+    return { error: `${res.status}: ${errorBody}` };
   }
   const data = (await res.json().catch(() => null)) as { message_id?: string } | null;
-  return data?.message_id;
+  return { mid: data?.message_id };
 }
 
 // Button template de Meta (hasta 3 botones "web_url"): se manda como mensaje
@@ -271,68 +274,108 @@ export async function POST(req: Request) {
   return Response.json({ ok: true });
 }
 
+// Tipo legible del adjunto ("audio", "imagen"…) para la bandeja del panel.
+function attachmentKind(messaging: any): string {
+  const types: string[] = (messaging.message?.attachments ?? []).map((a: { type?: string }) => a?.type ?? "otro");
+  const label: Record<string, string> = {
+    audio: "audio",
+    image: "foto",
+    video: "video",
+    ig_reel: "reel",
+    reel: "reel",
+    share: "publicación compartida",
+    story_mention: "mención en historia",
+    animated_image: "sticker/GIF",
+    file: "archivo",
+  };
+  return types.map((t) => label[t] ?? t).join(", ") || "sin texto";
+}
+
 async function handleMessaging(messaging: any): Promise<void> {
-  {
+  // Lecturas ("visto"), reacciones y ediciones no son mensajes: ni se
+  // responden ni se registran en la bandeja.
+  if (!messaging.message) return;
 
-    // Eco de un mensaje SALIENTE de la cuenta (nuestro bot o una persona del
-    // equipo escribiendo a mano desde la app de Instagram — Meta manda este
-    // mismo evento para ambos casos, sin distinguir el origen). En un eco,
-    // sender/recipient vienen invertidos: sender es la cuenta del negocio,
-    // recipient es la persona real. Si el mid no es de los que registramos al
-    // enviar, es una persona real ya respondiendo: pausamos el bot para ese
-    // hilo, para no pisarle la respuesta.
-    if (messaging.message?.is_echo) {
-      const customerId: string | undefined = messaging.recipient?.id;
-      const mid: string | undefined = messaging.message?.mid;
-      if (customerId && !(await wasSentByBot(customerId, mid))) {
-        console.log("[instagram webhook] eco ajeno — una persona ya está respondiendo, se pausa el bot", { customerId });
-        await pauseForHuman(customerId);
-      }
-      return;
+  // Eco de un mensaje SALIENTE de la cuenta (nuestro bot o una persona del
+  // equipo escribiendo a mano desde la app de Instagram — Meta manda este
+  // mismo evento para ambos casos, sin distinguir el origen). En un eco,
+  // sender/recipient vienen invertidos: sender es la cuenta del negocio,
+  // recipient es la persona real. Si el mid no es de los que registramos al
+  // enviar, es una persona real ya respondiendo: pausamos el bot para ese
+  // hilo, para no pisarle la respuesta.
+  if (messaging.message.is_echo) {
+    const customerId: string | undefined = messaging.recipient?.id;
+    const mid: string | undefined = messaging.message.mid;
+    if (customerId && !(await wasSentByBot(customerId, mid))) {
+      console.log("[instagram webhook] eco ajeno — una persona ya está respondiendo, se pausa el bot", { customerId });
+      await pauseForHuman(customerId);
+      await logIgEvent({
+        accountId: messaging.sender?.id ?? null,
+        senderId: customerId,
+        senderName: null,
+        text: messaging.message.text ?? attachmentKind(messaging),
+        outcome: "equipo_respondio",
+        detail: "El asistente queda en pausa 6 horas en este chat.",
+      });
     }
+    return;
+  }
 
-    // Mención o respuesta a una historia: no es una pregunta real, y
-    // responder con el flujo normal del asistente queda fuera de contexto.
-    const isStoryMention = Array.isArray(messaging.message?.attachments)
-      ? messaging.message.attachments.some((a: { type?: string }) => a?.type === "story_mention")
-      : false;
-    const isStoryReply = Boolean(messaging.message?.reply_to?.story);
-    if (isStoryMention || isStoryReply) {
-      console.log("[instagram webhook] descartado: mención/respuesta a historia", { isStoryMention, isStoryReply });
-      return;
-    }
+  const from: string | undefined = messaging.sender?.id;
+  // `recipient.id` es la cuenta de Instagram que recibió el mensaje — con
+  // varias cuentas conectadas a la misma app, decide con cuál responder.
+  const igAccountId: string | undefined = messaging.recipient?.id;
+  if (!from) return;
+  const base = { accountId: igAccountId ?? null, senderId: from, senderName: null as string | null };
 
-    // Reacciones, "seen" y tipos no soportados en v1 (solo texto).
-    if (!messaging.message?.text) {
-      console.log("[instagram webhook] descartado: sin texto", { hasMessaging: !!messaging });
-      return;
-    }
+  // Mención o respuesta a una historia: no es una pregunta real, y
+  // responder con el flujo normal del asistente queda fuera de contexto.
+  const isStoryMention = Array.isArray(messaging.message.attachments)
+    ? messaging.message.attachments.some((a: { type?: string }) => a?.type === "story_mention")
+    : false;
+  const isStoryReply = Boolean(messaging.message.reply_to?.story);
+  if (isStoryMention || isStoryReply) {
+    console.log("[instagram webhook] descartado: mención/respuesta a historia", { isStoryMention, isStoryReply });
+    await logIgEvent({
+      ...base,
+      text: messaging.message.text ?? attachmentKind(messaging),
+      outcome: "historia",
+      detail: isStoryMention ? "Mención en una historia" : "Respuesta a una historia",
+    });
+    return;
+  }
 
-    const from: string = messaging.sender?.id;
-    const userText: string = messaging.message.text;
-    if (!from) return;
+  // Audios, fotos, reels compartidos, stickers: el asistente solo lee texto.
+  if (!messaging.message.text) {
+    console.log("[instagram webhook] descartado: sin texto", { kind: attachmentKind(messaging) });
+    await logIgEvent({ ...base, text: null, outcome: "adjunto", detail: attachmentKind(messaging) });
+    return;
+  }
 
-    if (await isHumanPaused(from)) {
-      console.log("[instagram webhook] hilo pausado por toma de control humano, no se responde", { from });
-      return;
-    }
+  const userText: string = messaging.message.text;
 
-    // `recipient.id` es la cuenta de Instagram que recibió el mensaje — con
-    // varias cuentas conectadas a la misma app, decide con cuál responder.
-    const igAccountId: string | undefined = messaging.recipient?.id;
-    const scope = await getInstagramScope(igAccountId);
+  if (await isHumanPaused(from)) {
+    console.log("[instagram webhook] hilo pausado por toma de control humano, no se responde", { from });
+    await logIgEvent({ ...base, text: userText, outcome: "pausado", detail: null });
+    return;
+  }
 
-    // Cuenta desactivada desde /eventos/admin: no responde nada — queda para
-    // que el equipo la atienda a mano, sin el asistente de por medio.
-    if (scope?.enabled === false) {
-      console.log("[instagram webhook] cuenta desactivada, no se responde", { igAccountId });
-      return;
-    }
+  const scope = await getInstagramScope(igAccountId);
 
-    const token = resolveInstagramToken(igAccountId);
-    const senderName = await resolveInstagramSenderName(from, token);
-    console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, senderName, scope, userText });
+  // Cuenta desactivada desde /eventos/admin: no responde nada — queda para
+  // que el equipo la atienda a mano, sin el asistente de por medio.
+  if (scope?.enabled === false) {
+    console.log("[instagram webhook] cuenta desactivada, no se responde", { igAccountId });
+    await logIgEvent({ ...base, text: userText, outcome: "cuenta_desactivada", detail: null });
+    return;
+  }
 
+  const token = resolveInstagramToken(igAccountId);
+  const senderName = await resolveInstagramSenderName(from, token);
+  base.senderName = senderName ?? null;
+  console.log("[instagram webhook] procesando", { from, igAccountId, hasToken: !!token, senderName, scope, userText });
+
+  try {
     // Historial corto por IGSID: permite completar el flujo de agendar en
     // varios mensajes (servicio → hora → nombre) como en el chat del sitio.
     const history: ModelMessage[] = (await getHistory(from)).map((t) => ({ role: t.role, content: t.content }));
@@ -364,30 +407,40 @@ async function handleMessaging(messaging: any): Promise<void> {
       stopWhen: stepCountIs(5),
     });
 
-    if (text?.trim()) {
-      const textMid = await sendInstagramText(from, text.trim(), token);
-      await recordBotMessageId(from, textMid);
-
-      // enviar_dresscode (ver lib/mandagroup-tools.ts) devuelve la URL de la
-      // imagen real — si el modelo la usó en este turno, se manda aparte.
-      const dresscodeResult = toolResults?.find((r) => r.toolName === "enviar_dresscode")?.output as
-        | { image_url?: string }
-        | undefined;
-      const dresscodeImageUrl = dresscodeResult?.image_url;
-      if (dresscodeImageUrl) {
-        const imageMid = await sendInstagramImage(from, dresscodeImageUrl, token);
-        await recordBotMessageId(from, imageMid);
-      }
-
-      const buttons = filterButtonsByScope(clientConfig.instagramActionButtons, scope);
-      if (buttons.length) {
-        const buttonsMid = await sendInstagramButtons(from, buttons, token);
-        await recordBotMessageId(from, buttonsMid);
-      }
-      await appendHistory(from, { role: "user", content: userText }, { role: "assistant", content: text.trim() });
-      logChat({ canal: "instagram", userText, assistantText: text.trim() });
-    } else {
+    if (!text?.trim()) {
       console.warn("[instagram webhook] el modelo no devolvió texto, no se responde", { from, igAccountId });
+      await logIgEvent({ ...base, text: userText, outcome: "sin_respuesta_modelo", detail: null });
+      return;
     }
+
+    const sent = await sendInstagramText(from, text.trim(), token);
+    if (sent.error) {
+      await logIgEvent({ ...base, text: userText, outcome: "error_envio", detail: sent.error });
+      return;
+    }
+    await recordBotMessageId(from, sent.mid);
+    await logIgEvent({ ...base, text: userText, outcome: "respondido", detail: text.trim() });
+
+    // enviar_dresscode (ver lib/mandagroup-tools.ts) devuelve la URL de la
+    // imagen real — si el modelo la usó en este turno, se manda aparte.
+    const dresscodeResult = toolResults?.find((r) => r.toolName === "enviar_dresscode")?.output as
+      | { image_url?: string }
+      | undefined;
+    const dresscodeImageUrl = dresscodeResult?.image_url;
+    if (dresscodeImageUrl) {
+      const imageMid = await sendInstagramImage(from, dresscodeImageUrl, token);
+      await recordBotMessageId(from, imageMid);
+    }
+
+    const buttons = filterButtonsByScope(clientConfig.instagramActionButtons, scope);
+    if (buttons.length) {
+      const buttonsMid = await sendInstagramButtons(from, buttons, token);
+      await recordBotMessageId(from, buttonsMid);
+    }
+    await appendHistory(from, { role: "user", content: userText }, { role: "assistant", content: text.trim() });
+    logChat({ canal: "instagram", userText, assistantText: text.trim() });
+  } catch (error) {
+    await logIgEvent({ ...base, text: userText, outcome: "error", detail: String((error as Error)?.message ?? error) });
+    throw error;
   }
 }

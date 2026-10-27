@@ -168,6 +168,21 @@ export function ensureSchema(): Promise<void> {
       // asistente no se pisa con una persona real ya atendiendo.
       await sql`ALTER TABLE ig_threads ADD COLUMN IF NOT EXISTS human_paused_until TIMESTAMPTZ`;
       await sql`ALTER TABLE ig_threads ADD COLUMN IF NOT EXISTS bot_sent_mids JSONB`;
+      // Bandeja de Instagram (lib/ig-inbox-log.ts): cada DM recibido y qué hizo
+      // el asistente — para revisar días después por qué no respondió a alguien.
+      await sql`
+        CREATE TABLE IF NOT EXISTS ig_inbox_log (
+          id BIGSERIAL PRIMARY KEY,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          account_id TEXT,
+          sender_id TEXT,
+          sender_name TEXT,
+          text TEXT,
+          outcome TEXT NOT NULL,
+          detail TEXT
+        )
+      `;
+      await sql`CREATE INDEX IF NOT EXISTS ig_inbox_log_created_idx ON ig_inbox_log (created_at DESC)`;
 
       // Ficha de cliente de la Agenda: transversal a cualquier rubro que la use
       // (peluquería, barbería, dentista, abogado) — mismo patrón que re_clients

@@ -5,6 +5,7 @@ import { Star } from "lucide-react";
 import type { Carta, Local } from "@/lib/mandagroup-catalog";
 import { AdminLocales } from "@/components/eventos/AdminLocales";
 import { AdminCartas } from "@/components/eventos/AdminCartas";
+import { AdminInstagramInbox } from "@/components/eventos/AdminInstagramInbox";
 
 type Venue = "renaca" | "vina";
 // Eventos importados también pueden ser de Costa Nights (Costa Eventos).
@@ -132,6 +133,18 @@ function FeatureButton({
   );
 }
 
+const ADMIN_SECTIONS = [
+  { id: "bandeja-instagram", label: "Bandeja Instagram" },
+  { id: "eventos", label: "Eventos" },
+  { id: "vesti", label: "Vesti" },
+  { id: "cartas", label: "Cartas" },
+  { id: "locales", label: "Locales" },
+  { id: "instagram-cuentas", label: "Asistente por cuenta" },
+  { id: "pausadas", label: "Pausadas" },
+  { id: "estadisticas", label: "Estadísticas" },
+  { id: "anuncios", label: "Anuncios" },
+];
+
 const UNRESTRICTED: InstagramScope = { enabled: true, venues: ["renaca", "vina"], allowReservations: true };
 
 // Panel de administración del módulo eventos: número de reservas, eventos
@@ -186,22 +199,42 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
     <div className="space-y-10">
       {error && <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 
+      {/* Índice del panel: cada área en un toque (el panel crece con cada módulo). */}
+      <nav
+        aria-label="Secciones del panel"
+        className="sticky top-16 z-20 -mx-4 flex gap-2 overflow-x-auto border-b border-foreground/10 bg-background/90 px-4 py-3 backdrop-blur sm:top-20"
+      >
+        {ADMIN_SECTIONS.map((sec) => (
+          <a
+            key={sec.id}
+            href={`#${sec.id}`}
+            className="shrink-0 rounded-full bg-foreground/[0.07] px-3 py-1.5 text-xs font-semibold text-foreground/75 hover:bg-primary hover:text-background"
+          >
+            {sec.label}
+          </a>
+        ))}
+      </nav>
+
       {/* Locales con su canal de reservas (reemplaza el antiguo "WhatsApp de
           reservas" único) y cartas de cada marca. */}
+      <div id="locales" className="scroll-mt-24">
       <AdminLocales
         locales={state.locales}
         saving={saving}
         onSave={(locales) => patch({ action: "saveLocales", locales })}
       />
+      </div>
+      <div id="cartas" className="scroll-mt-24">
       <AdminCartas
         cartas={state.cartas}
         adminKey={adminKey}
         saving={saving}
         onSave={(cartas) => patch({ action: "saveCartas", cartas })}
       />
+      </div>
 
       {/* Eventos activos */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
+      <section id="eventos" className="scroll-mt-24 rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Eventos y entradas</h2>
         <p className="mt-1 text-sm text-foreground/60">
           Cada evento tiene su propio link de entradas (Vesti u otra pasarela) — viernes y sábado pueden convivir
@@ -292,7 +325,7 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
 
       {/* Eventos importados de Vesti: se publican solos (sitio + asistente);
           acá solo se ocultan los que no deban salir. */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
+      <section id="vesti" className="scroll-mt-24 rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Eventos desde Vesti</h2>
         <p className="mt-1 text-sm text-foreground/60">
           Todo evento futuro publicado en Vesti por Manda Reñaca, Manda Viña, Costa Eventos (Costa Nights) o Eventos & Stand Up aparece
@@ -357,7 +390,7 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
       </section>
 
       {/* Publicidad pagada en Meta */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
+      <section id="anuncios" className="scroll-mt-24 rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Anuncios activos en Meta</h2>
         <p className="mt-1 text-sm text-foreground/60">
           Meta solo muestra cada anuncio al público al que va dirigido, por eso es normal no verlos en tu propio feed.
@@ -378,10 +411,15 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
         </div>
       </section>
 
+      <AdminInstagramInbox
+        adminKey={adminKey}
+        accountLabels={Object.fromEntries(Object.keys(state.instagramAccounts).map((id) => [id, IG_ACCOUNT_LABEL[id] ?? id]))}
+      />
+
       {/* Alcance por cuenta de Instagram — acota qué local(es) y si ofrece
           reservas, por si una cuenta (ej. @mandavina.cl) debe responder solo
           de su propio local, sin mencionar el otro ni derivar reservas. */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
+      <section id="instagram-cuentas" className="scroll-mt-24 rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Instagram por cuenta</h2>
         <p className="mt-1 text-sm text-foreground/60">
           Sin tocar nada acá, cada cuenta responde de ambos locales y ofrece reservas — normal. Acótala solo si
@@ -408,7 +446,7 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
       {/* Conversaciones pausadas por toma de control humano — cuando alguien
           del equipo responde a mano desde la app, el bot se pausa 6h solo
           para no pisarle la respuesta. Reanudar acá corta esa pausa antes. */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
+      <section id="pausadas" className="scroll-mt-24 rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Conversaciones pausadas (Instagram)</h2>
         <p className="mt-1 text-sm text-foreground/60">
           Si alguien del equipo responde a mano un DM, el bot se pausa solo ahí por 6 horas para no pisarle la
@@ -444,7 +482,7 @@ export function AdminEventos({ adminKey }: { adminKey: string | null }) {
       </section>
 
       {/* Estadísticas (equivalente a ManyChat) */}
-      <section className="rounded-2xl border border-foreground/10 p-6">
+      <section id="estadisticas" className="scroll-mt-24 rounded-2xl border border-foreground/10 p-6">
         <h2 className="font-heading text-lg font-semibold text-foreground">Estadísticas (últimos 30 días)</h2>
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="Total derivaciones" value={state.stats.total} />

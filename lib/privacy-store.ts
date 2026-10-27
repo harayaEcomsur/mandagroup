@@ -137,6 +137,8 @@ export async function purgeExpiredData(): Promise<Record<string, number>> {
   await del("embed_orders", "embed_orders", "created_at", retentionMonths("orders"));
   await del("re_deliveries", "re_deliveries", "created_at", retentionMonths("realEstateDeliveries"));
   await del("re_contracts", "re_contracts", "created_at", retentionMonths("realEstateContracts"));
+  // Bandeja de Instagram (lib/ig-inbox-log.ts): solo diagnóstico, 1 mes.
+  await del("ig_inbox_log", "ig_inbox_log", "created_at", 1);
 
   // chat_log tiene su propia función (mismo criterio, reutilizada tal cual).
   const chatCutoffDays = retentionMonths("chatLogs") * 30;

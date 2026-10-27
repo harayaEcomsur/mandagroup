@@ -45,7 +45,7 @@ export default async function EventosAdminPage({ searchParams }: { searchParams:
           ) : (
             <>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">Panel del negocio</p>
-              <h1 className="mt-3 font-heading text-3xl font-bold text-foreground">Reservas, entradas y estadísticas</h1>
+              <h1 className="mt-3 font-heading text-3xl font-bold text-foreground">Panel de Manda Group</h1>
               <div className="mt-8">
                 <AdminEventos adminKey={isClaveSession(user) ? (searchParams.clave ?? null) : null} />
               </div>
