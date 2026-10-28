@@ -9,6 +9,8 @@ import { CartaReader } from "@/components/mandagroup/CartaReader";
 import { CartaPromo } from "@/components/mandagroup/CartaPromo";
 import { EventCard } from "@/components/mandagroup/EventCard";
 import { PdfViewer } from "@/components/mandagroup/PdfViewer";
+import { Footer } from "@/components/layout/Footer";
+import { clientConfig } from "@/config/client.config";
 
 // Una carta a pantalla completa: adonde llevan los botones "Ver carta" del
 // inicio en el celular (QR de las mesas de Manda). Sin el header del sitio,
@@ -54,50 +56,53 @@ export default async function CartaReaderPage({ params }: { params: { id: string
   const heading = venue ? "Próximo en Manda" : "Próximo en Manda Group";
 
   return (
-    <main className="min-h-dvh pb-28">
-      {source.pages?.length ? (
-        <CartaReader title={carta.title} pages={source.pages} pdfUrl={source.url} siblings={siblings} />
-      ) : (
-        <div className="mx-auto max-w-3xl px-4 pt-6">
-          <h1 className="font-heading text-2xl font-semibold text-foreground">{carta.title}</h1>
-          <div className="mt-6">
-            <PdfViewer url={source.url} title={carta.title} />
+    <>
+      <main className="min-h-dvh pb-16">
+        {source.pages?.length ? (
+          <CartaReader title={carta.title} pages={source.pages} pdfUrl={source.url} siblings={siblings} />
+        ) : (
+          <div className="mx-auto max-w-3xl px-4 pt-6">
+            <h1 className="font-heading text-2xl font-semibold text-foreground">{carta.title}</h1>
+            <div className="mt-6">
+              <PdfViewer url={source.url} title={carta.title} />
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {promos.length > 0 && (
-        <section className="mx-auto mt-16 max-w-3xl px-4" aria-labelledby="carta-fechas">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Después de la carta</p>
-          <h2 id="carta-fechas" className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground">
-            Lo que viene en Manda Group
-          </h2>
-          <div className="mt-6 grid gap-8 sm:grid-cols-3">
-            {promos.map((e) => (
-              <EventCard key={e.id} event={e} />
-            ))}
-          </div>
-          <Link
-            href="/#eventos"
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
-          >
-            Ver toda la cartelera
-            <ArrowUpRight size={15} strokeWidth={2} />
+        {promos.length > 0 && (
+          <section className="mx-auto mt-16 max-w-3xl px-4" aria-labelledby="carta-fechas">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Después de la carta</p>
+            <h2 id="carta-fechas" className="mt-2 font-heading text-2xl font-semibold tracking-tight text-foreground">
+              Lo que viene en Manda Group
+            </h2>
+            <div className="mt-6 grid gap-8 sm:grid-cols-3">
+              {promos.map((e) => (
+                <EventCard key={e.id} event={e} />
+              ))}
+            </div>
+            <Link
+              href="/#eventos"
+              className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-accent"
+            >
+              Ver toda la cartelera
+              <ArrowUpRight size={15} strokeWidth={2} />
+            </Link>
+          </section>
+        )}
+
+        <p className="mx-auto mt-14 max-w-3xl px-4 text-sm text-foreground/50">
+          <Link href="/carta" className="underline underline-offset-4 hover:text-foreground">
+            Otras cartas del grupo
+          </Link>{" "}
+          ·{" "}
+          <Link href="/" className="underline underline-offset-4 hover:text-foreground">
+            Manda Group
           </Link>
-        </section>
-      )}
+        </p>
 
-      <p className="mx-auto mt-14 max-w-3xl px-4 text-sm text-foreground/50">
-        <Link href="/carta" className="underline underline-offset-4 hover:text-foreground">
-          Otras cartas del grupo
-        </Link>{" "}
-        ·{" "}
-        <Link href="/" className="underline underline-offset-4 hover:text-foreground">
-          Manda Group
-        </Link>
-      </p>
-
-      <CartaPromo items={promos.map(toPromoItem)} heading={heading} />
-    </main>
+        <CartaPromo items={promos.map(toPromoItem)} heading={heading} />
+      </main>
+      <Footer config={clientConfig} />
+    </>
   );
 }
