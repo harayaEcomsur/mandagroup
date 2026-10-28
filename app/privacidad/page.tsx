@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { clientConfig } from "@/config/client.config";
 import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 import { buildPrivacySections } from "@/lib/privacy-content";
 import { ArcoRequestForm } from "@/components/privacy/ArcoRequestForm";
 import { ConsentToggle } from "@/components/analytics/ConsentToggle";
@@ -53,6 +54,7 @@ export default function PrivacidadPage() {
           </div>
         </div>
       </main>
+      <Footer config={clientConfig} />
     </>
   );
 }

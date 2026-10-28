@@ -27,7 +27,7 @@ export function Footer({ config }: { config: ClientConfig }) {
           </a>
           {mostrarCredito && (
             <a
-              href="https://haraya.dev/como-lo-hicimos"
+              href="https://www.haraya.dev/como-lo-hicimos"
               target="_blank"
               rel="noopener"
               className="font-medium text-foreground/70 transition-colors hover:text-primary"
