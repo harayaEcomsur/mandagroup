@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { BRAND_PAGES, FIESTAS_PAGE, brandPagePath } from "@/lib/mandagroup-pages";
 import { clientConfig } from "@/config/client.config";
 import { currentAdminUser } from "@/lib/auth";
@@ -16,6 +16,7 @@ import {
   setVestiHidden,
   getFeaturedEventIds,
   setEventFeatured,
+  MANDAGROUP_DATA_TAG,
 } from "@/lib/mandagroup-store";
 import { listVestiEvents } from "@/lib/vesti";
 import { listCartas, listLocales, normalizeAlias, saveCartas, saveLocales } from "@/lib/mandagroup-catalog";
@@ -192,6 +193,9 @@ export async function PATCH(req: Request) {
   } else {
     await resumeThread(parsed.data.senderId);
   }
+  // Datos cacheados de las páginas públicas (MANDAGROUP_DATA_TAG): cualquier
+  // cambio del panel los invalida para que se vea al instante.
+  revalidateTag(MANDAGROUP_DATA_TAG);
   // La home muestra la cartelera: que un evento agregado/ocultado se vea ya,
   // sin esperar la regeneración de 5 min.
   if (["upsertEvent", "setEventActive", "setVestiHidden", "setEventFeatured", "saveLocales"].includes(parsed.data.action)) {

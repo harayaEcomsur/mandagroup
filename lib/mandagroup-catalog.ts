@@ -1,5 +1,6 @@
 import { db, jsonb, withDb } from "@/lib/db";
-import { getReservationNumber } from "@/lib/mandagroup-store";
+import { unstable_cache } from "next/cache";
+import { getReservationNumber, MANDAGROUP_DATA_TAG } from "@/lib/mandagroup-store";
 
 // Locales (con su canal de reservas) y cartas de las marcas del grupo,
 // editables desde /eventos/admin. Se guardan como dos documentos en
@@ -333,7 +334,7 @@ async function writeDoc(key: string, memKey: "locales" | "cartas" | "migrations"
 
 const byOrder = <T extends { order: number }>(list: T[]) => [...list].sort((a, b) => a.order - b.order);
 
-export async function listLocales(): Promise<Local[]> {
+async function loadLocales(): Promise<Local[]> {
   const saved = await readDoc<Local[]>(LOCALES_KEY, "locales");
   if (saved) return byOrder(saved);
   // Primera vez: si en el panel ya había un WhatsApp de reservas (el campo
@@ -361,7 +362,7 @@ const CARTA_MIGRATIONS: { id: string; apply: (list: Carta[]) => Carta[] }[] = [
   },
 ];
 
-export async function listCartas(): Promise<Carta[]> {
+async function loadCartas(): Promise<Carta[]> {
   const saved = await readDoc<Carta[]>(CARTAS_KEY, "cartas");
   if (!saved) return byOrder(DEFAULT_CARTAS);
   const applied = (await readDoc<string[]>(CARTAS_MIGRATIONS_KEY, "migrations")) ?? [];
@@ -372,6 +373,17 @@ export async function listCartas(): Promise<Carta[]> {
   await writeDoc(CARTAS_MIGRATIONS_KEY, "migrations", [...applied, ...pending.map((m) => m.id)]);
   return byOrder(migrated);
 }
+
+// Cacheadas (ver MANDAGROUP_DATA_TAG): las páginas y los QR (/cmanda.pdf…) no
+// despiertan la base; guardar en el panel invalida la etiqueta.
+export const listLocales = unstable_cache(loadLocales, ["mandagroup-locales-v1"], {
+  revalidate: 3600,
+  tags: [MANDAGROUP_DATA_TAG],
+});
+export const listCartas = unstable_cache(loadCartas, ["mandagroup-cartas-v1"], {
+  revalidate: 3600,
+  tags: [MANDAGROUP_DATA_TAG],
+});
 
 export async function saveCartas(cartas: Carta[]): Promise<void> {
   await writeDoc(CARTAS_KEY, "cartas", cartas);

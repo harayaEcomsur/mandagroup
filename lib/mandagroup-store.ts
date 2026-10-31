@@ -1,5 +1,13 @@
+import { unstable_cache } from "next/cache";
 import { db, jsonb, withDb } from "@/lib/db";
 import { listVestiEvents, type VestiTicket } from "@/lib/vesti";
+
+// Lo que leen las páginas públicas (cartelera, cartas, locales) se guarda en
+// la caché de datos de Next y NO consulta la base en cada regeneración: así la
+// base (Neon, cobra por horas encendida) se apaga entre visitas. Cualquier
+// cambio desde el panel invalida esta etiqueta (app/api/eventos/route.ts), así
+// que lo editado se ve al instante igual que antes.
+export const MANDAGROUP_DATA_TAG = "mandagroup-data";
 
 // Almacén del módulo "eventos" (discotecas/fiestas, requiere modules.eventos):
 // número de WhatsApp al que se derivan las reservas y eventos activos con su
@@ -203,7 +211,7 @@ export async function listEvents(): Promise<MandagroupEvent[]> {
 // Vesti (salvo los que se ocultaron desde el panel). Si un evento manual ya
 // apunta al mismo link de Vesti, gana el manual (puede traer un título más
 // limpio) y el importado no se duplica.
-export async function listActiveEvents(): Promise<MandagroupEvent[]> {
+async function loadActiveEvents(): Promise<MandagroupEvent[]> {
   const today = todayCL();
   const [manual, vesti, hidden, featured] = await Promise.all([
     listEvents(),
@@ -249,6 +257,13 @@ export async function listActiveEvents(): Promise<MandagroupEvent[]> {
     (a, b) => a.eventDate.localeCompare(b.eventDate) || (a.startsAt ?? "").localeCompare(b.startsAt ?? "")
   );
 }
+
+// 15 min como máximo (lo mismo que dura la caché de Vesti): el filtro de
+// "desde hoy" se pone al día solo pasada la medianoche.
+export const listActiveEvents = unstable_cache(loadActiveEvents, ["mandagroup-active-events-v1"], {
+  revalidate: 900,
+  tags: [MANDAGROUP_DATA_TAG],
+});
 
 // --- Eventos destacados en el hero ---
 // Ids tal como los devuelve listActiveEvents: el id del evento manual, o

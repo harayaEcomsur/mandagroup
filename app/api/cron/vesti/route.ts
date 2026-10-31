@@ -1,12 +1,14 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { listVestiEvents, VESTI_CACHE_TAG } from "@/lib/vesti";
+import { MANDAGROUP_DATA_TAG } from "@/lib/mandagroup-store";
+import imageLoader from "@/lib/image-loader";
 
 // Cron de Vesti (martes y jueves, ver vercel.json): deja la cartelera lista
 // antes de que llegue gente, en vez de que el primer visitante "pague" el
 // trabajo.
 // 1. Fuerza una lectura nueva de Vesti (invalida la caché de 15 min).
 // 2. Regenera la home y /llms.txt con esos datos.
-// 3. Pide cada flyer al optimizador de imágenes en los anchos que usa la
+// 3. Pide cada flyer a /api/img (lib/image-loader) en los anchos que usa la
 //    página: así la primera persona que ve un flyer nuevo no espera a que se
 //    procese.
 // Fuera de estos días la cartelera igual se refresca sola cada 15 min; esto
@@ -30,6 +32,7 @@ export async function GET(req: Request) {
   if (!isAuthorized(req)) return Response.json({ error: "No autorizado" }, { status: 401 });
 
   revalidateTag(VESTI_CACHE_TAG);
+  revalidateTag(MANDAGROUP_DATA_TAG);
   const events = await listVestiEvents();
   revalidatePath("/");
   revalidatePath("/llms.txt");
@@ -42,7 +45,7 @@ export async function GET(req: Request) {
   const urls = events
     .filter((e) => e.imageUrl)
     .flatMap((e) =>
-      FLYER_WIDTHS.map((w) => `${base}/_next/image?url=${encodeURIComponent(e.imageUrl!)}&w=${w}&q=75`)
+      FLYER_WIDTHS.map((w) => `${base}${imageLoader({ src: e.imageUrl!, width: w, quality: 75 })}`)
     );
   const results = await Promise.all(
     urls.map((u) =>
